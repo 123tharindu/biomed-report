@@ -46,7 +46,11 @@ st.header("🔬 Instruments List")
 if "instruments_count" not in st.session_state:
     st.session_state.instruments_count = 1
 
-# Functions to add or remove instrument entries
+# Callback function to auto update name when article changes
+def update_instrument_name(index):
+    selected_art = st.session_state[f"art_{index}"]
+    st.session_state[f"name_{index}"] = catalog_dict.get(selected_art, "")
+
 def add_instrument():
     st.session_state.instruments_count += 1
 
@@ -61,19 +65,29 @@ for i in range(st.session_state.instruments_count):
     st.markdown(f"#### 🔪 Instrument Entry #{i+1}")
     col1, col2 = st.columns([1, 2])
     
+    # Initialize session state keys for each instrument if not present
+    if f"art_{i}" not in st.session_state:
+        st.session_state[f"art_{i}"] = ""
+    if f"name_{i}" not in st.session_state:
+        st.session_state[f"name_{i}"] = ""
+
     with col1:
         uploaded_file = st.file_uploader(f"Upload Photo #{i+1}", type=["jpg", "jpeg", "png"], key=f"img_{i}")
         recommendation = st.selectbox(f"Recommendation #{i+1}", options=["Replace", "Service", "Repair", "OK"], key=f"rec_{i}")
         
     with col2:
         if len(article_options) > 1:
-            article_no = st.selectbox(f"Select Article Number #{i+1}", options=article_options, key=f"art_{i}", index=0)
-            default_name = catalog_dict.get(article_no, "") if article_no else ""
+            article_no = st.selectbox(
+                f"Select Article Number #{i+1}", 
+                options=article_options, 
+                key=f"art_{i}", 
+                on_change=update_instrument_name, 
+                args=(i,)
+            )
         else:
-            article_no = st.text_input(f"Article Number #{i+1}", value="", key=f"art_txt_{i}")
-            default_name = ""
+            article_no = st.text_input(f"Article Number #{i+1}", key=f"art_{i}")
             
-        instrument_name = st.text_input(f"Instrument Name #{i+1}", value=default_name, key=f"name_{i}")
+        instrument_name = st.text_input(f"Instrument Name #{i+1}", key=f"name_{i}")
         damage_details = st.text_area(f"Details of Damage #{i+1}", value="", key=f"dam_{i}", placeholder="Enter details of damage...")
         
     instrument_entries.append({
