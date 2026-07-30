@@ -3,7 +3,7 @@ import pandas as pd
 import datetime
 import io
 import os
-from PIL import Image
+from PIL import Image, ImageOps
 from google import genai
 from reportlab.lib.pagesizes import letter
 from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, Image as RLImage, HRFlowable
@@ -26,55 +26,105 @@ if GEMINI_API_KEY:
 st.title("🏥 BIOMED INTERNATIONAL (PVT) LTD")
 st.subheader("PROFESSIONAL LAP SCAN REPORT GENERATOR (AI-POWERED)")
 
-# Sri Lankan Hospitals List for Autocomplete
+# Comprehensive Sri Lankan Hospitals List (Government & Private)
 SL_HOSPITALS = [
+    "--- COLOMBO & SUBURBS ---",
     "National Hospital of Sri Lanka (NHSL Colombo)",
+    "Lady Ridgeway Hospital for Children (LRH)",
+    "De Soysa Hospital for Women (Maternity)",
+    "Castle Street Hospital for Women",
+    "Colombo South Teaching Hospital (Kalubowila)",
+    "Colombo North Teaching Hospital (Ragama)",
+    "National Institute of Mental Health (Angoda)",
+    "National Cancer Institute (Apeksha Hospital Maharagama)",
+    "National Dental Hospital (Maharagama)",
+    "Base Hospital Homagama",
+    "Base Hospital Avissawella",
+    "Base Hospital Mulleriyawa",
+    "Asiri Central Hospital (Colombo)",
+    "Asiri Surgical Hospital (Colombo)",
+    "Asiri Hospital Narahenpita",
+    "Lanka Hospitals (Colombo)",
+    "Nawaloka Hospital (Colombo)",
+    "Durdans Hospital (Colombo)",
+    "Kings Hospital (Colombo)",
+    "Ninewells Hospital (Colombo)",
+    "Park Hospital (Colombo)",
+    "Hemass Hospital (Thalawathugoda)",
+    "Pannipitiya Nursing Home",
+    
+    "--- KANDY & CENTRAL ---",
     "National Hospital Kandy",
     "Teaching Hospital Peradeniya",
-    "Teaching Hospital Karapitiya",
-    "Teaching Hospital Jaffna",
-    "Teaching Hospital Anuradhapura",
-    "Teaching Hospital Batticaloa",
-    "Teaching Hospital Kurunegala",
-    "Teaching Hospital Ratnapura",
-    "Teaching Hospital Mahamodara",
-    "CSTH Kalubowila (Colombo South)",
-    "CNTH Ragama (Colombo North)",
-    "Lady Ridgeway Hospital (LRH)",
-    "De Soysa Hospital for Women",
-    "Castle Street Hospital for Women",
     "Sirimavo Bandaranaike Specialized Children's Hospital",
-    "District General Hospital Chilaw",
+    "District General Hospital Nuwara Eliya",
+    "District General Hospital Matale",
+    "Base Hospital Gampola",
+    "Base Hospital Nawalapitiya",
+    "Asiri Hospital Kandy",
+    "Suwasevana Hospital Kandy",
+    "Kandy Private Hospital",
+    
+    "--- SOUTHERN ---",
+    "Teaching Hospital Karapitiya (Galle)",
+    "Teaching Hospital Mahamodara (Maternity)",
+    "District General Hospital Matara",
+    "District General Hospital Hambantota",
+    "Base Hospital Tangalle",
+    "Base Hospital Balapitiya",
+    "Base Hospital Elpitiya",
+    "Ruhunu Hospital (Galle)",
+    "Asiri Hospital Matara",
+    "Co-operative Hospital Matara",
+    
+    "--- WESTERN (GAMPAHA & KALUTARA) ---",
     "District General Hospital Gampaha",
     "District General Hospital Negombo",
     "District General Hospital Kalutara",
-    "District General Hospital Matara",
-    "District General Hospital Hambantota",
-    "District General Hospital Nuwara Eliya",
-    "District General Hospital Kegalle",
-    "District General Hospital Badulla",
-    "District General Hospital Monaragala",
+    "Base Hospital Wathupitiwala",
+    "Base Hospital Kiribathgoda",
+    "Base Hospital Panadura",
+    "Base Hospital Horana",
+    "Hemas Hospital (Wattala)",
+    "Nawaloka Hospital (Negombo)",
+    "ArOGYA Hospital (Gampaha)",
+    
+    "--- NORTH WESTERN (KURUNEGALA & CHILAW) ---",
+    "Teaching Hospital Kurunegala",
+    "District General Hospital Chilaw",
+    "Base Hospital Kuliyapitiya",
+    "Base Hospital Dambadeniya",
+    "Base Hospital Marawila",
+    "Co-operative Hospital Kurunegala",
+    "Central Hospital Kurunegala",
+    
+    "--- NORTHERN & EASTERN ---",
+    "Teaching Hospital Jaffna",
+    "Teaching Hospital Batticaloa",
     "District General Hospital Trincomalee",
     "District General Hospital Vavuniya",
+    "District General Hospital Mannar",
+    "District General Hospital Kilinochchi",
+    "District General Hospital Mullaaitivu",
+    "Base Hospital Kalmunai",
+    "Northern Central Hospital (Jaffna)",
+    
+    "--- NORTH CENTRAL & SABARAGAMUWA ---",
+    "Teaching Hospital Anuradhapura",
+    "Teaching Hospital Ratnapura",
     "District General Hospital Polonnaruwa",
-    "BH Dambadeniya",
-    "BH Panadura",
-    "BH Horana",
-    "BH Wathupitiwala",
-    "BH Avissawella",
-    "BH Marawila",
-    "BH Kuliyapitiya",
-    "BH Homagama",
-    "Asiri Surgical Hospital",
-    "Asiri Central Hospital",
-    "Lanka Hospitals",
-    "Nawaloka Hospital Colombo",
-    "Durdans Hospital",
-    "Hemass Hospital Wattala",
-    "Hemas Hospital Thalawathugoda",
-    "Kings Hospital Colombo",
-    "Ninewells Hospital",
-    "Other"
+    "District General Hospital Kegalle",
+    "Base Hospital Karawanella",
+    "Base Hospital Mawanella",
+    
+    "--- UVA PROVINCE ---",
+    "Provincial General Hospital Badulla",
+    "District General Hospital Monaragala",
+    "Base Hospital Bandarawela",
+    "Base Hospital Diyatalawa",
+    
+    "--- OTHER / CUSTOM ---",
+    "Other (Type manually)"
 ]
 
 # Load Excel File
@@ -95,12 +145,13 @@ def load_catalog(file_path):
 catalog_dict = load_catalog(EXCEL_FILE)
 article_options = sorted(list(catalog_dict.keys()))
 
-# AI Image Analysis Function
+# AI Image Analysis Function using Gemini 2.5 Flash
 def analyze_damage_with_ai(image_file, item_name):
     if not client:
         return "API Key not configured properly.", "OK"
     try:
         image = Image.open(image_file)
+        image = ImageOps.exif_transpose(image) # Correct rotation for AI
         prompt = f"""
         You are an expert Biomedical Engineer inspecting a surgical instrument named '{item_name}'.
         Examine the provided image carefully and identify physical damage, cracks, dents, insulation damage, or wear and tear.
@@ -130,8 +181,12 @@ def analyze_damage_with_ai(image_file, item_name):
 # Sidebar Inputs
 st.sidebar.header("📋 Report Details")
 
-selected_hospital = st.sidebar.selectbox("Customer / Hospital", options=SL_HOSPITALS, index=0)
-hospital_name = st.sidebar.text_input("Enter Hospital Name", value="") if selected_hospital == "Other" else selected_hospital
+selected_hospital = st.sidebar.selectbox("Customer / Hospital", options=SL_HOSPITALS, index=1)
+
+if selected_hospital == "Other (Type manually)" or selected_hospital.startswith("---"):
+    hospital_name = st.sidebar.text_input("Enter Hospital Name Manually", value="")
+else:
+    hospital_name = selected_hospital
 
 selected_date = st.sidebar.date_input("Inspection Date", value=datetime.date.today())
 inspection_date_str = selected_date.strftime("%d %B %Y")
@@ -294,8 +349,12 @@ if st.button("📄 Generate Professional PDF Report", type="primary", use_contai
         img_obj = Paragraph("No Image", cell_center)
         if item["image"] is not None:
             temp_img_path = f"temp_inst_{idx}.png"
-            with open(temp_img_path, "wb") as f:
-                f.write(item["image"].getbuffer())
+            
+            # Auto-rotate photo based on EXIF metadata before embedding in PDF
+            img = Image.open(item["image"])
+            img = ImageOps.exif_transpose(img)
+            img.save(temp_img_path)
+            
             img_obj = RLImage(temp_img_path, width=65, height=65)
             temp_files_to_remove.append(temp_img_path)
             
