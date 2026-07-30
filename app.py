@@ -26,7 +26,7 @@ if GEMINI_API_KEY:
 st.title("🏥 BIOMED INTERNATIONAL (PVT) LTD")
 st.subheader("PROFESSIONAL LAP SCAN REPORT GENERATOR (AI-POWERED)")
 
-# Comprehensive Sri Lankan Hospitals List (Government & Private)
+# Comprehensive Sri Lankan Hospitals List
 SL_HOSPITALS = [
     "--- COLOMBO & SUBURBS ---",
     "National Hospital of Sri Lanka (NHSL Colombo)",
@@ -145,13 +145,21 @@ def load_catalog(file_path):
 catalog_dict = load_catalog(EXCEL_FILE)
 article_options = sorted(list(catalog_dict.keys()))
 
-# AI Image Analysis Function using Gemini 2.5 Flash
+# Helper function to resize and auto-rotate images (Reduces MB usage)
+def process_and_compress_image(image_file, max_size=(1000, 1000)):
+    img = Image.open(image_file)
+    img = ImageOps.exif_transpose(img) # Fix rotation
+    img.thumbnail(max_size, Image.Resampling.LANCZOS) # Compress/Resize
+    return img
+
+# AI Image Analysis Function
 def analyze_damage_with_ai(image_file, item_name):
     if not client:
         return "API Key not configured properly.", "OK"
     try:
-        image = Image.open(image_file)
-        image = ImageOps.exif_transpose(image) # Correct rotation for AI
+        # Resize image before sending to AI to save MBs & speed up API
+        compressed_img = process_and_compress_image(image_file, max_size=(800, 800))
+        
         prompt = f"""
         You are an expert Biomedical Engineer inspecting a surgical instrument named '{item_name}'.
         Examine the provided image carefully and identify physical damage, cracks, dents, insulation damage, or wear and tear.
@@ -162,7 +170,7 @@ def analyze_damage_with_ai(image_file, item_name):
         """
         response = client.models.generate_content(
             model='gemini-2.5-flash',
-            contents=[image, prompt]
+            contents=[compressed_img, prompt]
         )
         lines = [line.strip() for line in response.text.strip().split('\n') if line.strip()]
         
@@ -348,12 +356,12 @@ if st.button("📄 Generate Professional PDF Report", type="primary", use_contai
     for idx, item in enumerate(instrument_entries):
         img_obj = Paragraph("No Image", cell_center)
         if item["image"] is not None:
-            temp_img_path = f"temp_inst_{idx}.png"
+            temp_img_path = f"temp_inst_{idx}.jpg"
             
-            # Auto-rotate photo based on EXIF metadata before embedding in PDF
-            img = Image.open(item["image"])
-            img = ImageOps.exif_transpose(img)
-            img.save(temp_img_path)
+            # Process & Compress Image before saving to PDF to optimize file size and MBs
+            img = process_and_compress_image(item["image"], max_size=(500, 500))
+            img = img.convert("RGB")
+            img.save(temp_img_path, "JPEG", quality=80) # Compress JPEG quality
             
             img_obj = RLImage(temp_img_path, width=65, height=65)
             temp_files_to_remove.append(temp_img_path)
