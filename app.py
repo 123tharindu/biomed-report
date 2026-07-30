@@ -148,8 +148,8 @@ article_options = sorted(list(catalog_dict.keys()))
 # Helper function to resize and auto-rotate images (Reduces MB usage)
 def process_and_compress_image(image_file, max_size=(1000, 1000)):
     img = Image.open(image_file)
-    img = ImageOps.exif_transpose(img) # Fix rotation
-    img.thumbnail(max_size, Image.Resampling.LANCZOS) # Compress/Resize
+    img = ImageOps.exif_transpose(img)
+    img.thumbnail(max_size, Image.Resampling.LANCZOS)
     return img
 
 # AI Image Analysis Function
@@ -157,7 +157,6 @@ def analyze_damage_with_ai(image_file, item_name):
     if not client:
         return "API Key not configured properly.", "OK"
     try:
-        # Resize image before sending to AI to save MBs & speed up API
         compressed_img = process_and_compress_image(image_file, max_size=(800, 800))
         
         prompt = f"""
@@ -256,7 +255,6 @@ for i in range(st.session_state.instruments_count):
             
         instrument_name = st.text_input(f"Instrument Name #{i+1}", key=f"name_{i}")
 
-        # AI Auto Detect Button
         if uploaded_file and GEMINI_API_KEY:
             if st.button(f"🤖 AI Auto-Detect Damage for #{i+1}", key=f"ai_btn_{i}"):
                 with st.spinner("Analyzing image with Gemini AI..."):
@@ -267,7 +265,6 @@ for i in range(st.session_state.instruments_count):
 
         damage_details = st.text_area(f"Details of Damage #{i+1}", key=f"dam_{i}", placeholder="Enter or AI-detect damage details...")
         
-        # Recommendation Options
         rec_options = ["Replace", "Service", "Repair", "OK"]
         curr_rec = st.session_state.get(f"rec_{i}", "Service")
         rec_idx = rec_options.index(curr_rec) if curr_rec in rec_options else 1
@@ -318,12 +315,28 @@ if st.button("📄 Generate Professional PDF Report", type="primary", use_contai
     cell_style = ParagraphStyle('TableCell', parent=styles['Normal'], fontSize=8, leading=11, textColor=colors.HexColor('#222222'), fontName='Helvetica')
     cell_center = ParagraphStyle('TableCellCenter', parent=cell_style, alignment=1)
 
-    story.append(Paragraph("BIOMED INTERNATIONAL (PVT) LTD", title_style))
-    story.append(Spacer(1, 2))
-    story.append(Paragraph("TECHNICAL INSPECTION & LAP SCAN REPORT", subtitle_style))
-    story.append(Spacer(1, 8))
-    story.append(HRFlowable(width="100%", thickness=2, color=navy_primary, spaceAfter=12))
-    
+    # --- LETTERHEAD / HEADER IMAGE SECTION ---
+    # File options check (header.png, header.jpg, header.jpeg)
+    header_img_path = None
+    for ext in ['header.png', 'header.jpg', 'header.jpeg']:
+        if os.path.exists(ext):
+            header_img_path = ext
+            break
+
+    if header_img_path:
+        # Width: 552 points (Full width of printable PDF area)
+        # Height: Automatically calculated around 75pt for proper ratio
+        story.append(RLImage(header_img_path, width=552, height=75))
+        story.append(Spacer(1, 10))
+    else:
+        # Fallback Text Header if image not found
+        story.append(Paragraph("BIOMED INTERNATIONAL (PVT) LTD", title_style))
+        story.append(Spacer(1, 2))
+        story.append(Paragraph("TECHNICAL INSPECTION & LAP SCAN REPORT", subtitle_style))
+        story.append(Spacer(1, 8))
+        story.append(HRFlowable(width="100%", thickness=2, color=navy_primary, spaceAfter=12))
+
+    # Details Box Header
     header_data = [
         [Paragraph("<b>Customer / Hospital:</b>", cell_style), Paragraph(hospital_name, cell_style), Paragraph("<b>Brand:</b>", cell_style), Paragraph("Aesculap", cell_style)],
         [Paragraph("<b>Inspection Date:</b>", cell_style), Paragraph(inspection_date_str, cell_style), Paragraph("<b>System / Set:</b>", cell_style), Paragraph("Laparoscopy", cell_style)],
@@ -346,6 +359,7 @@ if st.button("📄 Generate Professional PDF Report", type="primary", use_contai
     story.append(t_header)
     story.append(Spacer(1, 15))
     
+    # Instruments Table
     table_data = [[
         Paragraph("#", th_style), Paragraph("PHOTO", th_style), Paragraph("ARTICLE NO", th_style),
         Paragraph("INSTRUMENT NAME", th_style), Paragraph("DETAILS OF DAMAGE", th_style), Paragraph("RECOMMENDATION", th_style)
@@ -357,11 +371,9 @@ if st.button("📄 Generate Professional PDF Report", type="primary", use_contai
         img_obj = Paragraph("No Image", cell_center)
         if item["image"] is not None:
             temp_img_path = f"temp_inst_{idx}.jpg"
-            
-            # Process & Compress Image before saving to PDF to optimize file size and MBs
             img = process_and_compress_image(item["image"], max_size=(500, 500))
             img = img.convert("RGB")
-            img.save(temp_img_path, "JPEG", quality=80) # Compress JPEG quality
+            img.save(temp_img_path, "JPEG", quality=80)
             
             img_obj = RLImage(temp_img_path, width=65, height=65)
             temp_files_to_remove.append(temp_img_path)
