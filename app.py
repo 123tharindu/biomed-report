@@ -110,7 +110,7 @@ def analyze_damage_with_ai(image_file, item_name):
         Line 2: Single-word Recommendation (Choose strictly one: Replace, Repair, Service, or OK).
         """
         response = client.models.generate_content(
-            model='gemini-1.5-flash',
+            model='gemini-2.5-flash',
             contents=[image, prompt]
         )
         lines = [line.strip() for line in response.text.strip().split('\n') if line.strip()]
