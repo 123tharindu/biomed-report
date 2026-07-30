@@ -13,7 +13,7 @@ from reportlab.lib import colors
 # Page Config
 st.set_page_config(page_title="Biomed International - AI Report Generator", page_icon="🏥", layout="wide")
 
-# Initialize Gemini Client if API key is provided
+# Initialize Gemini Client
 GEMINI_API_KEY = st.secrets.get("GEMINI_API_KEY", os.environ.get("GEMINI_API_KEY", ""))
 
 client = None
@@ -127,7 +127,7 @@ SL_HOSPITALS = [
     "Other (Type manually)"
 ]
 
-# Load Excel File
+# Load Excel Catalog File
 EXCEL_FILE = "Full Laparoscopy Articles Updated master file 07.07.2026.xlsx"
 
 @st.cache_data
@@ -139,20 +139,19 @@ def load_catalog(file_path):
         df['Article'] = df['Article'].astype(str).str.strip()
         df['Description'] = df['Description'].astype(str).str.strip()
         return dict(zip(df['Article'], df['Description']))
-    except Exception as e:
+    except Exception:
         return {}
 
 catalog_dict = load_catalog(EXCEL_FILE)
 article_options = sorted(list(catalog_dict.keys()))
 
-# Helper function to resize and auto-rotate images (Reduces MB usage)
-def process_and_compress_image(image_file, max_size=(1000, 1000)):
+def process_and_compress_image(image_file, max_size=(800, 800)):
     img = Image.open(image_file)
     img = ImageOps.exif_transpose(img)
     img.thumbnail(max_size, Image.Resampling.LANCZOS)
     return img
 
-# AI Image Analysis Function
+# AI Image Analysis Function (Updated to gemini-2.0-flash)
 def analyze_damage_with_ai(image_file, item_name):
     if not client:
         return "API Key not configured properly.", "OK"
@@ -168,7 +167,7 @@ def analyze_damage_with_ai(image_file, item_name):
         Line 2: Single-word Recommendation (Choose strictly one: Replace, Repair, Service, or OK).
         """
         response = client.models.generate_content(
-            model='gemini-2.5-flash',
+            model='gemini-2.0-flash',
             contents=[compressed_img, prompt]
         )
         lines = [line.strip() for line in response.text.strip().split('\n') if line.strip()]
@@ -183,7 +182,7 @@ def analyze_damage_with_ai(image_file, item_name):
                     break
         return damage_text, rec_text
     except Exception as e:
-        return f"Auto-analysis failed: {str(e)}", "OK"
+        return f"Auto-analysis unavailable: {str(e)}", "OK"
 
 # Sidebar Inputs
 st.sidebar.header("📋 Report Details")
@@ -291,7 +290,7 @@ st.divider()
 
 remarks = st.text_area("General Remarks", value="All above instruments require official inspection and technical servicing. Please review the recommended actions.")
 
-# Generate PDF Section
+# --- GENERATE PDF REPORT ---
 if st.button("📄 Generate Professional PDF Report", type="primary", use_container_width=True):
     buffer = io.BytesIO()
     doc = SimpleDocTemplate(
@@ -299,33 +298,32 @@ if st.button("📄 Generate Professional PDF Report", type="primary", use_contai
         pagesize=letter, 
         rightMargin=30, 
         leftMargin=30, 
-        topMargin=30, 
-        bottomMargin=30
+        topMargin=25, 
+        bottomMargin=25
     )
     story = []
     styles = getSampleStyleSheet()
     
-    navy_primary = colors.HexColor('#0A2540')
-    slate_bg = colors.HexColor('#F4F6F8')
-    border_color = colors.HexColor('#D0D7DE')
+    # --- COLOR PALETTE (ELEGANT NAVY BLUE THEME) ---
+    navy_primary = colors.HexColor('#0D2A4A')    # Deep Executive Navy
+    navy_accent = colors.HexColor('#1E3A8A')     # Soft Navy Accent
+    ice_blue_bg = colors.HexColor('#F0F4F8')     # Light Tint BG
+    border_navy = colors.HexColor('#BAC7D5')     # Clean Slate Navy Border
     
+    # --- PARAGRAPH STYLES ---
     title_style = ParagraphStyle('HeaderTitle', parent=styles['Heading1'], fontSize=16, leading=18, textColor=navy_primary, fontName='Helvetica-Bold')
-    subtitle_style = ParagraphStyle('HeaderSubtitle', parent=styles['Normal'], fontSize=11, leading=14, textColor=colors.HexColor('#555555'), fontName='Helvetica-Bold')
-    th_style = ParagraphStyle('TableHeader', parent=styles['Normal'], fontSize=8, leading=10, textColor=colors.white, fontName='Helvetica-Bold', alignment=1)
+    subtitle_style = ParagraphStyle('HeaderSubtitle', parent=styles['Normal'], fontSize=11, leading=14, textColor=navy_accent, fontName='Helvetica-Bold')
+    
+    label_style = ParagraphStyle('LabelNavy', parent=styles['Normal'], fontSize=8.5, leading=11, textColor=navy_primary, fontName='Helvetica-Bold')
+    value_style = ParagraphStyle('ValueText', parent=styles['Normal'], fontSize=8.5, leading=11, textColor=colors.HexColor('#1F2937'), fontName='Helvetica')
+    
+    th_style = ParagraphStyle('TableHeader', parent=styles['Normal'], fontSize=8.5, leading=11, textColor=colors.white, fontName='Helvetica-Bold', alignment=1)
     cell_style = ParagraphStyle('TableCell', parent=styles['Normal'], fontSize=8, leading=11, textColor=colors.HexColor('#222222'), fontName='Helvetica')
     cell_center = ParagraphStyle('TableCellCenter', parent=cell_style, alignment=1)
 
-    # --- LETTERHEAD / HEADER IMAGE SECTION ---
-    # Check for all case sensitivity variations of header image
+    # --- LETTERHEAD IMAGE CHECK ---
     header_img_path = None
-    possible_names = [
-        'header.PNG', 
-        'header.png', 
-        'header.jpg', 
-        'header.jpeg', 
-        'header.png.PNG', 
-        'header.PNG.png'
-    ]
+    possible_names = ['header.PNG', 'header.png', 'header.jpg', 'header.jpeg', 'header.png.PNG', 'header.PNG.png']
     
     for name in possible_names:
         if os.path.exists(name):
@@ -333,44 +331,47 @@ if st.button("📄 Generate Professional PDF Report", type="primary", use_contai
             break
 
     if header_img_path:
-        # Width: 552 points (Full printable width), Height: 75 points
+        # Full printable width = 552pt
         story.append(RLImage(header_img_path, width=552, height=75))
-        story.append(Spacer(1, 10))
+        story.append(Spacer(1, 8))
     else:
-        # Fallback Text Header if image not found
         story.append(Paragraph("BIOMED INTERNATIONAL (PVT) LTD", title_style))
         story.append(Spacer(1, 2))
         story.append(Paragraph("TECHNICAL INSPECTION & LAP SCAN REPORT", subtitle_style))
-        story.append(Spacer(1, 8))
-        story.append(HRFlowable(width="100%", thickness=2, color=navy_primary, spaceAfter=12))
+        story.append(Spacer(1, 6))
+        story.append(HRFlowable(width="100%", thickness=2, color=navy_primary, spaceAfter=10))
 
-    # Details Box Header
+    # --- METADATA HEADER BOX (NAVY THEMED) ---
     header_data = [
-        [Paragraph("<b>Customer / Hospital:</b>", cell_style), Paragraph(hospital_name, cell_style), Paragraph("<b>Brand:</b>", cell_style), Paragraph("Aesculap", cell_style)],
-        [Paragraph("<b>Inspection Date:</b>", cell_style), Paragraph(inspection_date_str, cell_style), Paragraph("<b>System / Set:</b>", cell_style), Paragraph("Laparoscopy", cell_style)],
-        [Paragraph("<b>Technician Name:</b>", cell_style), Paragraph(technician_name, cell_style), Paragraph("<b>Scope Serial No:</b>", cell_style), Paragraph("N/A", cell_style)],
-        [Paragraph("<b>Report No:</b>", cell_style), Paragraph(report_no, cell_style), Paragraph("<b>Camera System:</b>", cell_style), Paragraph("N/A", cell_style)],
-        [Paragraph("<b>Department:</b>", cell_style), Paragraph(department, cell_style), Paragraph("<b>Light Source:</b>", cell_style), Paragraph("N/A", cell_style)]
+        [Paragraph("Customer / Hospital:", label_style), Paragraph(hospital_name, value_style), Paragraph("Brand:", label_style), Paragraph("Aesculap", value_style)],
+        [Paragraph("Inspection Date:", label_style), Paragraph(inspection_date_str, value_style), Paragraph("System / Set:", label_style), Paragraph("Laparoscopy", value_style)],
+        [Paragraph("Technician Name:", label_style), Paragraph(technician_name, value_style), Paragraph("Scope Serial No:", label_style), Paragraph("N/A", value_style)],
+        [Paragraph("Report No:", label_style), Paragraph(report_no if report_no else "N/A", value_style), Paragraph("Camera System:", label_style), Paragraph("N/A", value_style)],
+        [Paragraph("Department:", label_style), Paragraph(department, value_style), Paragraph("Light Source:", label_style), Paragraph("N/A", value_style)]
     ]
     
-    t_header = Table(header_data, colWidths=[110, 166, 110, 166])
+    t_header = Table(header_data, colWidths=[105, 171, 105, 171])
     t_header.setStyle(TableStyle([
-        ('BACKGROUND', (0,0), (-1,-1), slate_bg),
-        ('BOX', (0,0), (-1,-1), 1, border_color),
-        ('INNERGRID', (0,0), (-1,-1), 0.5, border_color),
+        ('BACKGROUND', (0,0), (-1,-1), ice_blue_bg),
+        ('BOX', (0,0), (-1,-1), 1, navy_primary),
+        ('INNERGRID', (0,0), (-1,-1), 0.5, border_navy),
         ('VALIGN', (0,0), (-1,-1), 'MIDDLE'),
-        ('TOPPADDING', (0,0), (-1,-1), 5),
-        ('BOTTOMPADDING', (0,0), (-1,-1), 5),
+        ('TOPPADDING', (0,0), (-1,-1), 4),
+        ('BOTTOMPADDING', (0,0), (-1,-1), 4),
         ('LEFTPADDING', (0,0), (-1,-1), 8),
         ('RIGHTPADDING', (0,0), (-1,-1), 8),
     ]))
     story.append(t_header)
-    story.append(Spacer(1, 15))
+    story.append(Spacer(1, 12))
     
-    # Instruments Table
+    # --- INSTRUMENTS TABLE (TOTAL WIDTH = 552 PT) ---
     table_data = [[
-        Paragraph("#", th_style), Paragraph("PHOTO", th_style), Paragraph("ARTICLE NO", th_style),
-        Paragraph("INSTRUMENT NAME", th_style), Paragraph("DETAILS OF DAMAGE", th_style), Paragraph("RECOMMENDATION", th_style)
+        Paragraph("#", th_style), 
+        Paragraph("PHOTO", th_style), 
+        Paragraph("ARTICLE NO", th_style),
+        Paragraph("INSTRUMENT NAME", th_style), 
+        Paragraph("DETAILS OF DAMAGE", th_style), 
+        Paragraph("RECOMMENDATION", th_style)
     ]]
     
     temp_files_to_remove = []
@@ -381,13 +382,13 @@ if st.button("📄 Generate Professional PDF Report", type="primary", use_contai
             temp_img_path = f"temp_inst_{idx}.jpg"
             img = process_and_compress_image(item["image"], max_size=(500, 500))
             img = img.convert("RGB")
-            img.save(temp_img_path, "JPEG", quality=80)
+            img.save(temp_temp_img_path := temp_img_path, "JPEG", quality=80)
             
             img_obj = RLImage(temp_img_path, width=65, height=65)
             temp_files_to_remove.append(temp_img_path)
             
         rec = item["recommendation"]
-        rec_color = "#D9534F" if rec == "Replace" else ("#F0AD4E" if rec in ["Service", "Repair"] else "#5CB85C")
+        rec_color = "#C0392B" if rec == "Replace" else ("#D35400" if rec in ["Service", "Repair"] else "#27AE60")
         rec_html = f"<b><font color='{rec_color}'>{rec.upper()}</font></b>"
             
         table_data.append([
@@ -399,32 +400,46 @@ if st.button("📄 Generate Professional PDF Report", type="primary", use_contai
             Paragraph(rec_html, cell_center)
         ])
     
-    t_main = Table(table_data, colWidths=[24, 75, 95, 138, 130, 90])
+    # Column width tuning to avoid awkward text wrapping
+    t_main = Table(table_data, colWidths=[24, 75, 80, 138, 135, 100])
     t_main.setStyle(TableStyle([
         ('BACKGROUND', (0,0), (-1,0), navy_primary),
         ('VALIGN', (0,0), (-1,-1), 'MIDDLE'),
-        ('GRID', (0,0), (-1,-1), 0.5, border_color),
+        ('GRID', (0,0), (-1,-1), 0.5, border_navy),
         ('TOPPADDING', (0,0), (-1,-1), 6),
         ('BOTTOMPADDING', (0,0), (-1,-1), 6),
+        ('LEFTPADDING', (0,0), (-1,-1), 4),
+        ('RIGHTPADDING', (0,0), (-1,-1), 4),
     ]))
     
     story.append(t_main)
-    story.append(Spacer(1, 15))
+    story.append(Spacer(1, 12))
     
-    t_remarks = Table([[Paragraph(f"<b>General Remarks & Technical Observations:</b><br/>{remarks}", ParagraphStyle('Remarks', parent=cell_style, fontSize=8.5, leading=12))]], colWidths=[552])
-    t_remarks.setStyle(TableStyle([('BACKGROUND', (0,0), (-1,-1), slate_bg), ('BOX', (0,0), (-1,-1), 1, border_color), ('PADDING', (0,0), (-1,-1), 8)]))
+    # --- GENERAL REMARKS BOX ---
+    remarks_html = f"<b><font color='{navy_primary.hexval()}'>General Remarks & Technical Observations:</font></b><br/>{remarks}"
+    t_remarks = Table([[Paragraph(remarks_html, ParagraphStyle('RemarksStyle', parent=cell_style, fontSize=8.5, leading=12))]], colWidths=[552])
+    t_remarks.setStyle(TableStyle([
+        ('BACKGROUND', (0,0), (-1,-1), ice_blue_bg),
+        ('BOX', (0,0), (-1,-1), 1, navy_primary),
+        ('PADDING', (0,0), (-1,-1), 8)
+    ]))
     story.append(t_remarks)
     story.append(Spacer(1, 20))
     
+    # --- SIGNATURE SECTION (NAVY ACCENTS) ---
+    sig_label_style = ParagraphStyle('SigLabel', parent=cell_style, fontSize=8.5, leading=12, textColor=navy_primary)
     t_sig = Table([[
-        Paragraph(f"<b>Inspected By ({technician_name}):</b><br/><br/><br/>__________________________________<br/>Signature & Date", cell_style),
-        Paragraph("<b>Verified By (Hospital Authority):</b><br/><br/><br/>__________________________________<br/>Signature & Stamp", cell_style)
+        Paragraph(f"<b>Inspected By ({technician_name}):</b><br/><br/><br/>__________________________________<br/>Signature & Date", sig_label_style),
+        Paragraph("<b>Verified By (Hospital Authority):</b><br/><br/><br/>__________________________________<br/>Signature & Stamp", sig_label_style)
     ]], colWidths=[276, 276])
+    
     story.append(t_sig)
     
+    # Build Document
     doc.build(story)
     buffer.seek(0)
     
+    # Cleanup Temp Images
     for tf in temp_files_to_remove:
         if os.path.exists(tf):
             os.remove(tf)
