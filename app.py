@@ -29,7 +29,7 @@ def load_catalog(file_path):
         return {}
 
 catalog_dict = load_catalog(EXCEL_FILE)
-article_options = [""] + list(catalog_dict.keys())
+article_options = sorted(list(catalog_dict.keys()))
 
 # Sidebar Inputs
 st.sidebar.header("📋 Report Details")
@@ -48,8 +48,9 @@ if "instruments_count" not in st.session_state:
 
 # Callback function to auto update name when article changes
 def update_instrument_name(index):
-    selected_art = st.session_state[f"art_{index}"]
-    st.session_state[f"name_{index}"] = catalog_dict.get(selected_art, "")
+    selected_art = st.session_state.get(f"art_{index}")
+    if selected_art:
+        st.session_state[f"name_{index}"] = catalog_dict.get(selected_art, "")
 
 def add_instrument():
     st.session_state.instruments_count += 1
@@ -67,7 +68,7 @@ for i in range(st.session_state.instruments_count):
     
     # Initialize session state keys for each instrument if not present
     if f"art_{i}" not in st.session_state:
-        st.session_state[f"art_{i}"] = ""
+        st.session_state[f"art_{i}"] = None
     if f"name_{i}" not in st.session_state:
         st.session_state[f"name_{i}"] = ""
 
@@ -76,10 +77,13 @@ for i in range(st.session_state.instruments_count):
         recommendation = st.selectbox(f"Recommendation #{i+1}", options=["Replace", "Service", "Repair", "OK"], key=f"rec_{i}")
         
     with col2:
-        if len(article_options) > 1:
+        if len(article_options) > 0:
+            # Typeable & Searchable selectbox for Mobile Keyboard
             article_no = st.selectbox(
-                f"Select Article Number #{i+1}", 
+                f"Search & Select Article Number #{i+1}", 
                 options=article_options, 
+                index=None,
+                placeholder="🔍 Type Article No here...",
                 key=f"art_{i}", 
                 on_change=update_instrument_name, 
                 args=(i,)
@@ -92,7 +96,7 @@ for i in range(st.session_state.instruments_count):
         
     instrument_entries.append({
         "image": uploaded_file,
-        "article_no": article_no,
+        "article_no": article_no if article_no else "",
         "instrument_name": instrument_name,
         "damage": damage_details,
         "recommendation": recommendation
