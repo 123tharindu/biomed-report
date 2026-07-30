@@ -1,19 +1,83 @@
 import streamlit as st
 import pandas as pd
+import datetime
+import io
+import os
+from PIL import Image
+from google import genai
 from reportlab.lib.pagesizes import letter
 from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, Image as RLImage, HRFlowable
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.lib import colors
-import io
-import os
 
 # Page Config
-st.set_page_config(page_title="Biomed International - Dynamic Report Generator", page_icon="🏥", layout="wide")
+st.set_page_config(page_title="Biomed International - AI Report Generator", page_icon="🏥", layout="wide")
+
+# Initialize Gemini Client if API key is provided
+GEMINI_API_KEY = st.secrets.get("GEMINI_API_KEY", os.environ.get("GEMINI_API_KEY", ""))
+
+client = None
+if GEMINI_API_KEY:
+    try:
+        client = genai.Client(api_key=GEMINI_API_KEY)
+    except Exception as e:
+        st.sidebar.warning(f"Gemini API Init Error: {e}")
 
 st.title("🏥 BIOMED INTERNATIONAL (PVT) LTD")
-st.subheader("PROFESSIONAL LAP SCAN REPORT GENERATOR")
+st.subheader("PROFESSIONAL LAP SCAN REPORT GENERATOR (AI-POWERED)")
 
-# Load Excel File Automatically from GitHub Repository
+# Sri Lankan Hospitals List for Autocomplete
+SL_HOSPITALS = [
+    "National Hospital of Sri Lanka (NHSL Colombo)",
+    "National Hospital Kandy",
+    "Teaching Hospital Peradeniya",
+    "Teaching Hospital Karapitiya",
+    "Teaching Hospital Jaffna",
+    "Teaching Hospital Anuradhapura",
+    "Teaching Hospital Batticaloa",
+    "Teaching Hospital Kurunegala",
+    "Teaching Hospital Ratnapura",
+    "Teaching Hospital Mahamodara",
+    "CSTH Kalubowila (Colombo South)",
+    "CNTH Ragama (Colombo North)",
+    "Lady Ridgeway Hospital (LRH)",
+    "De Soysa Hospital for Women",
+    "Castle Street Hospital for Women",
+    "Sirimavo Bandaranaike Specialized Children's Hospital",
+    "District General Hospital Chilaw",
+    "District General Hospital Gampaha",
+    "District General Hospital Negombo",
+    "District General Hospital Kalutara",
+    "District General Hospital Matara",
+    "District General Hospital Hambantota",
+    "District General Hospital Nuwara Eliya",
+    "District General Hospital Kegalle",
+    "District General Hospital Badulla",
+    "District General Hospital Monaragala",
+    "District General Hospital Trincomalee",
+    "District General Hospital Vavuniya",
+    "District General Hospital Polonnaruwa",
+    "BH Dambadeniya",
+    "BH Panadura",
+    "BH Horana",
+    "BH Wathupitiwala",
+    "BH Avissawella",
+    "BH Marawila",
+    "BH Kuliyapitiya",
+    "BH Homagama",
+    "Asiri Surgical Hospital",
+    "Asiri Central Hospital",
+    "Lanka Hospitals",
+    "Nawaloka Hospital Colombo",
+    "Durdans Hospital",
+    "Hemass Hospital Wattala",
+    "Hemas Hospital Thalawathugoda",
+    "Kings Hospital Colombo",
+    "Ninewells Hospital",
+    "Other"
+]
+
+# Load Excel File
 EXCEL_FILE = "Full Laparoscopy Articles Updated master file 07.07.2026.xlsx"
 
 @st.cache_data
@@ -31,22 +95,62 @@ def load_catalog(file_path):
 catalog_dict = load_catalog(EXCEL_FILE)
 article_options = sorted(list(catalog_dict.keys()))
 
+# AI Image Analysis Function
+def analyze_damage_with_ai(image_file, item_name):
+    if not client:
+        return "API Key not configured properly.", "OK"
+    try:
+        image = Image.open(image_file)
+        prompt = f"""
+        You are an expert Biomedical Engineer inspecting a surgical instrument named '{item_name}'.
+        Examine the provided image carefully and identify physical damage, cracks, dents, insulation damage, or wear and tear.
+
+        Provide your analysis strictly in two lines:
+        Line 1: Technical explanation of the damage (Maximum 20 words). If no damage, write "No visible defect/damage observed."
+        Line 2: Single-word Recommendation (Choose strictly one: Replace, Repair, Service, or OK).
+        """
+        response = client.models.generate_content(
+            model='gemini-1.5-flash',
+            contents=[image, prompt]
+        )
+        lines = [line.strip() for line in response.text.strip().split('\n') if line.strip()]
+        
+        damage_text = lines[0] if len(lines) > 0 else "Inspection completed."
+        rec_text = "OK"
+        if len(lines) > 1:
+            possible_rec = lines[1].replace("Line 2:", "").strip()
+            for r in ["Replace", "Repair", "Service", "OK"]:
+                if r.lower() in possible_rec.lower():
+                    rec_text = r
+                    break
+        return damage_text, rec_text
+    except Exception as e:
+        return f"Auto-analysis failed: {str(e)}", "OK"
+
 # Sidebar Inputs
 st.sidebar.header("📋 Report Details")
-hospital_name = st.sidebar.text_input("Customer / Hospital", value="")
-inspection_date = st.sidebar.text_input("Inspection Date", value="")
-technician_name = st.sidebar.text_input("Technician Name", value="Biomed Technical Team")
+
+selected_hospital = st.sidebar.selectbox("Customer / Hospital", options=SL_HOSPITALS, index=0)
+hospital_name = st.sidebar.text_input("Enter Hospital Name", value="") if selected_hospital == "Other" else selected_hospital
+
+selected_date = st.sidebar.date_input("Inspection Date", value=datetime.date.today())
+inspection_date_str = selected_date.strftime("%d %B %Y")
+
+technician_name = st.sidebar.selectbox(
+    "Technician Name", 
+    options=["Dinushan De Zoysa", "Ishan Kelum", "Biomed Technical Team"],
+    index=0
+)
+
 report_no = st.sidebar.text_input("Report No.", value="")
 department = st.sidebar.text_input("Department", value="Theatre / Laparoscopy")
 
 st.divider()
 st.header("🔬 Instruments List")
 
-# Initialize Session State for Dynamic Instrument Entries
 if "instruments_count" not in st.session_state:
     st.session_state.instruments_count = 1
 
-# Callback function to auto update name when article changes
 def update_instrument_name(index):
     selected_art = st.session_state.get(f"art_{index}")
     if selected_art:
@@ -61,12 +165,10 @@ def remove_instrument():
 
 instrument_entries = []
 
-# Loop to display Dynamic Instrument Forms
 for i in range(st.session_state.instruments_count):
     st.markdown(f"#### 🔪 Instrument Entry #{i+1}")
     col1, col2 = st.columns([1, 2])
     
-    # Initialize session state keys for each instrument if not present
     if f"art_{i}" not in st.session_state:
         st.session_state[f"art_{i}"] = None
     if f"name_{i}" not in st.session_state:
@@ -74,11 +176,9 @@ for i in range(st.session_state.instruments_count):
 
     with col1:
         uploaded_file = st.file_uploader(f"Upload Photo #{i+1}", type=["jpg", "jpeg", "png"], key=f"img_{i}")
-        recommendation = st.selectbox(f"Recommendation #{i+1}", options=["Replace", "Service", "Repair", "OK"], key=f"rec_{i}")
         
     with col2:
         if len(article_options) > 0:
-            # Typeable & Searchable selectbox for Mobile Keyboard
             article_no = st.selectbox(
                 f"Search & Select Article Number #{i+1}", 
                 options=article_options, 
@@ -92,8 +192,25 @@ for i in range(st.session_state.instruments_count):
             article_no = st.text_input(f"Article Number #{i+1}", key=f"art_{i}")
             
         instrument_name = st.text_input(f"Instrument Name #{i+1}", key=f"name_{i}")
-        damage_details = st.text_area(f"Details of Damage #{i+1}", value="", key=f"dam_{i}", placeholder="Enter details of damage...")
+
+        # AI Auto Detect Button
+        if uploaded_file and GEMINI_API_KEY:
+            if st.button(f"🤖 AI Auto-Detect Damage for #{i+1}", key=f"ai_btn_{i}"):
+                with st.spinner("Analyzing image with Gemini AI..."):
+                    ai_damage, ai_rec = analyze_damage_with_ai(uploaded_file, instrument_name)
+                    st.session_state[f"dam_{i}"] = ai_damage
+                    st.session_state[f"rec_{i}"] = ai_rec
+                    st.success("Analysis Complete!")
+
+        damage_details = st.text_area(f"Details of Damage #{i+1}", key=f"dam_{i}", placeholder="Enter or AI-detect damage details...")
         
+        # Recommendation Options
+        rec_options = ["Replace", "Service", "Repair", "OK"]
+        curr_rec = st.session_state.get(f"rec_{i}", "Service")
+        rec_idx = rec_options.index(curr_rec) if curr_rec in rec_options else 1
+        
+        recommendation = st.selectbox(f"Recommendation #{i+1}", options=rec_options, index=rec_idx, key=f"rec_{i}")
+
     instrument_entries.append({
         "image": uploaded_file,
         "article_no": article_no if article_no else "",
@@ -103,12 +220,9 @@ for i in range(st.session_state.instruments_count):
     })
     st.markdown("---")
 
-# Buttons to Dynamically Add or Remove Items
 col_add, col_remove, _ = st.columns([1.5, 1.5, 5])
-
 with col_add:
     st.button("➕ Add Another Instrument", on_click=add_instrument, use_container_width=True)
-
 with col_remove:
     if st.session_state.instruments_count > 1:
         st.button("🗑️ Remove Last Instrument", on_click=remove_instrument, use_container_width=True)
@@ -117,7 +231,7 @@ st.divider()
 
 remarks = st.text_area("General Remarks", value="All above instruments require official inspection and technical servicing. Please review the recommended actions.")
 
-# Generate PDF Report Button
+# Generate PDF Section
 if st.button("📄 Generate Professional PDF Report", type="primary", use_container_width=True):
     buffer = io.BytesIO()
     doc = SimpleDocTemplate(
@@ -129,86 +243,30 @@ if st.button("📄 Generate Professional PDF Report", type="primary", use_contai
         bottomMargin=30
     )
     story = []
-    
     styles = getSampleStyleSheet()
     
-    # Custom Professional Styles
     navy_primary = colors.HexColor('#0A2540')
     slate_bg = colors.HexColor('#F4F6F8')
     border_color = colors.HexColor('#D0D7DE')
     
-    title_style = ParagraphStyle(
-        'HeaderTitle',
-        parent=styles['Heading1'],
-        fontSize=16,
-        leading=18,
-        textColor=navy_primary,
-        fontName='Helvetica-Bold'
-    )
-    
-    subtitle_style = ParagraphStyle(
-        'HeaderSubtitle',
-        parent=styles['Normal'],
-        fontSize=11,
-        leading=14,
-        textColor=colors.HexColor('#555555'),
-        fontName='Helvetica-Bold'
-    )
-    
-    th_style = ParagraphStyle(
-        'TableHeader',
-        parent=styles['Normal'],
-        fontSize=8,
-        leading=10,
-        textColor=colors.white,
-        fontName='Helvetica-Bold',
-        alignment=1
-    )
-    
-    cell_style = ParagraphStyle(
-        'TableCell',
-        parent=styles['Normal'],
-        fontSize=8,
-        leading=11,
-        textColor=colors.HexColor('#222222'),
-        fontName='Helvetica'
-    )
-    
-    cell_center = ParagraphStyle(
-        'TableCellCenter',
-        parent=cell_style,
-        alignment=1
-    )
+    title_style = ParagraphStyle('HeaderTitle', parent=styles['Heading1'], fontSize=16, leading=18, textColor=navy_primary, fontName='Helvetica-Bold')
+    subtitle_style = ParagraphStyle('HeaderSubtitle', parent=styles['Normal'], fontSize=11, leading=14, textColor=colors.HexColor('#555555'), fontName='Helvetica-Bold')
+    th_style = ParagraphStyle('TableHeader', parent=styles['Normal'], fontSize=8, leading=10, textColor=colors.white, fontName='Helvetica-Bold', alignment=1)
+    cell_style = ParagraphStyle('TableCell', parent=styles['Normal'], fontSize=8, leading=11, textColor=colors.HexColor('#222222'), fontName='Helvetica')
+    cell_center = ParagraphStyle('TableCellCenter', parent=cell_style, alignment=1)
 
-    # Document Header
     story.append(Paragraph("BIOMED INTERNATIONAL (PVT) LTD", title_style))
     story.append(Spacer(1, 2))
     story.append(Paragraph("TECHNICAL INSPECTION & LAP SCAN REPORT", subtitle_style))
     story.append(Spacer(1, 8))
     story.append(HRFlowable(width="100%", thickness=2, color=navy_primary, spaceAfter=12))
     
-    # Header Info Block
     header_data = [
-        [
-            Paragraph("<b>Customer / Hospital:</b>", cell_style), Paragraph(hospital_name, cell_style),
-            Paragraph("<b>Brand:</b>", cell_style), Paragraph("Aesculap", cell_style)
-        ],
-        [
-            Paragraph("<b>Inspection Date:</b>", cell_style), Paragraph(inspection_date, cell_style),
-            Paragraph("<b>System / Set:</b>", cell_style), Paragraph("Laparoscopy", cell_style)
-        ],
-        [
-            Paragraph("<b>Technician Name:</b>", cell_style), Paragraph(technician_name, cell_style),
-            Paragraph("<b>Scope Serial No:</b>", cell_style), Paragraph("N/A", cell_style)
-        ],
-        [
-            Paragraph("<b>Report No:</b>", cell_style), Paragraph(report_no, cell_style),
-            Paragraph("<b>Camera System:</b>", cell_style), Paragraph("N/A", cell_style)
-        ],
-        [
-            Paragraph("<b>Department:</b>", cell_style), Paragraph(department, cell_style),
-            Paragraph("<b>Light Source:</b>", cell_style), Paragraph("N/A", cell_style)
-        ]
+        [Paragraph("<b>Customer / Hospital:</b>", cell_style), Paragraph(hospital_name, cell_style), Paragraph("<b>Brand:</b>", cell_style), Paragraph("Aesculap", cell_style)],
+        [Paragraph("<b>Inspection Date:</b>", cell_style), Paragraph(inspection_date_str, cell_style), Paragraph("<b>System / Set:</b>", cell_style), Paragraph("Laparoscopy", cell_style)],
+        [Paragraph("<b>Technician Name:</b>", cell_style), Paragraph(technician_name, cell_style), Paragraph("<b>Scope Serial No:</b>", cell_style), Paragraph("N/A", cell_style)],
+        [Paragraph("<b>Report No:</b>", cell_style), Paragraph(report_no, cell_style), Paragraph("<b>Camera System:</b>", cell_style), Paragraph("N/A", cell_style)],
+        [Paragraph("<b>Department:</b>", cell_style), Paragraph(department, cell_style), Paragraph("<b>Light Source:</b>", cell_style), Paragraph("N/A", cell_style)]
     ]
     
     t_header = Table(header_data, colWidths=[110, 166, 110, 166])
@@ -222,18 +280,12 @@ if st.button("📄 Generate Professional PDF Report", type="primary", use_contai
         ('LEFTPADDING', (0,0), (-1,-1), 8),
         ('RIGHTPADDING', (0,0), (-1,-1), 8),
     ]))
-    
     story.append(t_header)
     story.append(Spacer(1, 15))
     
-    # Main Items Table
     table_data = [[
-        Paragraph("#", th_style),
-        Paragraph("PHOTO", th_style),
-        Paragraph("ARTICLE NO", th_style),
-        Paragraph("INSTRUMENT NAME", th_style),
-        Paragraph("DETAILS OF DAMAGE", th_style),
-        Paragraph("RECOMMENDATION", th_style)
+        Paragraph("#", th_style), Paragraph("PHOTO", th_style), Paragraph("ARTICLE NO", th_style),
+        Paragraph("INSTRUMENT NAME", th_style), Paragraph("DETAILS OF DAMAGE", th_style), Paragraph("RECOMMENDATION", th_style)
     ]]
     
     temp_files_to_remove = []
@@ -248,13 +300,7 @@ if st.button("📄 Generate Professional PDF Report", type="primary", use_contai
             temp_files_to_remove.append(temp_img_path)
             
         rec = item["recommendation"]
-        if rec == "Replace":
-            rec_color = "#D9534F"
-        elif rec in ["Service", "Repair"]:
-            rec_color = "#F0AD4E"
-        else:
-            rec_color = "#5CB85C"
-            
+        rec_color = "#D9534F" if rec == "Replace" else ("#F0AD4E" if rec in ["Service", "Repair"] else "#5CB85C")
         rec_html = f"<b><font color='{rec_color}'>{rec.upper()}</font></b>"
             
         table_data.append([
@@ -269,61 +315,29 @@ if st.button("📄 Generate Professional PDF Report", type="primary", use_contai
     t_main = Table(table_data, colWidths=[24, 75, 95, 138, 130, 90])
     t_main.setStyle(TableStyle([
         ('BACKGROUND', (0,0), (-1,0), navy_primary),
-        ('ALIGN', (0,0), (-1,-1), 'LEFT'),
         ('VALIGN', (0,0), (-1,-1), 'MIDDLE'),
         ('GRID', (0,0), (-1,-1), 0.5, border_color),
         ('TOPPADDING', (0,0), (-1,-1), 6),
         ('BOTTOMPADDING', (0,0), (-1,-1), 6),
-        ('LEFTPADDING', (0,0), (-1,-1), 5),
-        ('RIGHTPADDING', (0,0), (-1,-1), 5),
     ]))
     
     story.append(t_main)
     story.append(Spacer(1, 15))
     
-    # Remarks Block
-    remarks_style = ParagraphStyle(
-        'RemarksStyle',
-        parent=cell_style,
-        fontSize=8.5,
-        leading=12
-    )
-    
-    remarks_data = [
-        [Paragraph(f"<b>General Remarks & Technical Observations:</b><br/>{remarks}", remarks_style)]
-    ]
-    t_remarks = Table(remarks_data, colWidths=[552])
-    t_remarks.setStyle(TableStyle([
-        ('BACKGROUND', (0,0), (-1,-1), slate_bg),
-        ('BOX', (0,0), (-1,-1), 1, border_color),
-        ('TOPPADDING', (0,0), (-1,-1), 8),
-        ('BOTTOMPADDING', (0,0), (-1,-1), 8),
-        ('LEFTPADDING', (0,0), (-1,-1), 10),
-        ('RIGHTPADDING', (0,0), (-1,-1), 10),
-    ]))
+    t_remarks = Table([[Paragraph(f"<b>General Remarks & Technical Observations:</b><br/>{remarks}", ParagraphStyle('Remarks', parent=cell_style, fontSize=8.5, leading=12))]], colWidths=[552])
+    t_remarks.setStyle(TableStyle([('BACKGROUND', (0,0), (-1,-1), slate_bg), ('BOX', (0,0), (-1,-1), 1, border_color), ('PADDING', (0,0), (-1,-1), 8)]))
     story.append(t_remarks)
     story.append(Spacer(1, 20))
     
-    # Clean Signatures Block
-    sig_data = [
-        [
-            Paragraph("<b>Inspected By (Biomed Engineer):</b><br/><br/><br/>__________________________________<br/>Signature & Date", cell_style),
-            Paragraph("<b>Verified By (Hospital Authority):</b><br/><br/><br/>__________________________________<br/>Signature & Stamp", cell_style)
-        ]
-    ]
-    t_sig = Table(sig_data, colWidths=[276, 276])
-    t_sig.setStyle(TableStyle([
-        ('VALIGN', (0,0), (-1,-1), 'TOP'),
-        ('LEFTPADDING', (0,0), (-1,-1), 10),
-        ('RIGHTPADDING', (0,0), (-1,-1), 10),
-    ]))
-    
+    t_sig = Table([[
+        Paragraph(f"<b>Inspected By ({technician_name}):</b><br/><br/><br/>__________________________________<br/>Signature & Date", cell_style),
+        Paragraph("<b>Verified By (Hospital Authority):</b><br/><br/><br/>__________________________________<br/>Signature & Stamp", cell_style)
+    ]], colWidths=[276, 276])
     story.append(t_sig)
     
     doc.build(story)
     buffer.seek(0)
     
-    # Cleanup temp images
     for tf in temp_files_to_remove:
         if os.path.exists(tf):
             os.remove(tf)
