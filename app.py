@@ -316,16 +316,24 @@ if st.button("📄 Generate Professional PDF Report", type="primary", use_contai
     cell_center = ParagraphStyle('TableCellCenter', parent=cell_style, alignment=1)
 
     # --- LETTERHEAD / HEADER IMAGE SECTION ---
-    # File options check (header.png, header.jpg, header.jpeg)
+    # Check for all case sensitivity variations of header image
     header_img_path = None
-    for ext in ['header.png', 'header.jpg', 'header.jpeg']:
-        if os.path.exists(ext):
-            header_img_path = ext
+    possible_names = [
+        'header.PNG', 
+        'header.png', 
+        'header.jpg', 
+        'header.jpeg', 
+        'header.png.PNG', 
+        'header.PNG.png'
+    ]
+    
+    for name in possible_names:
+        if os.path.exists(name):
+            header_img_path = name
             break
 
     if header_img_path:
-        # Width: 552 points (Full width of printable PDF area)
-        # Height: Automatically calculated around 75pt for proper ratio
+        # Width: 552 points (Full printable width), Height: 75 points
         story.append(RLImage(header_img_path, width=552, height=75))
         story.append(Spacer(1, 10))
     else:
