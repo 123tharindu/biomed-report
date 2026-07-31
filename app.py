@@ -227,7 +227,7 @@ def remove_instrument():
 instrument_entries = []
 
 for i in range(st.session_state.instruments_count):
-    st.markdown(f"#### 🩺 Instrument Entry #{i+1}")
+    st.markdown(f"#### 🔪 Instrument Entry #{i+1}")
     col1, col2 = st.columns([1, 2])
     
     if f"art_{i}" not in st.session_state:
@@ -310,11 +310,15 @@ if st.button("📄 Generate Professional PDF Report", type="primary", use_contai
         navy_accent = colors.HexColor('#1E3A8A')
         ice_blue_bg = colors.HexColor('#F0F4F8')
         border_navy = colors.HexColor('#BAC7D5')
+        gold_accent = colors.HexColor('#D4AF37')
         
         # --- PARAGRAPH STYLES ---
-        title_style = ParagraphStyle('HeaderTitle', parent=styles['Heading1'], fontSize=16, leading=18, textColor=navy_primary, fontName='Helvetica-Bold')
-        subtitle_style = ParagraphStyle('HeaderSubtitle', parent=styles['Normal'], fontSize=11, leading=14, textColor=navy_accent, fontName='Helvetica-Bold')
+        company_name_style = ParagraphStyle('CompName', parent=styles['Heading1'], fontSize=15, leading=17, textColor=colors.white, fontName='Helvetica-Bold')
+        company_sub_style = ParagraphStyle('CompSub', parent=styles['Normal'], fontSize=7.5, leading=10, textColor=colors.HexColor('#CBD5E1'), fontName='Helvetica')
         
+        report_title_style = ParagraphStyle('RepTitle', parent=styles['Normal'], fontSize=11, leading=13, textColor=colors.white, fontName='Helvetica-Bold', alignment=2)
+        report_sub_style = ParagraphStyle('RepSub', parent=styles['Normal'], fontSize=8, leading=10, textColor=gold_accent, fontName='Helvetica-Bold', alignment=2)
+
         label_style = ParagraphStyle('LabelNavy', parent=styles['Normal'], fontSize=8.5, leading=11, textColor=navy_primary, fontName='Helvetica-Bold')
         value_style = ParagraphStyle('ValueText', parent=styles['Normal'], fontSize=8.5, leading=11, textColor=colors.HexColor('#1F2937'), fontName='Helvetica')
         
@@ -322,24 +326,31 @@ if st.button("📄 Generate Professional PDF Report", type="primary", use_contai
         cell_style = ParagraphStyle('TableCell', parent=styles['Normal'], fontSize=8, leading=11, textColor=colors.HexColor('#222222'), fontName='Helvetica')
         cell_center = ParagraphStyle('TableCellCenter', parent=cell_style, alignment=1)
 
-        # --- LETTERHEAD IMAGE CHECK ---
-        header_img_path = None
-        possible_names = ['header.PNG', 'header.png', 'header.jpg', 'header.jpeg', 'header.png.PNG', 'header.PNG.png']
+        # --- CODE-GENERATED EXECUTIVE LETTERHEAD HEADER (535pt printable width) ---
+        header_table_content = [
+            [
+                Paragraph("<b>BIOMED INTERNATIONAL (PVT) LTD</b>", company_name_style),
+                Paragraph("TECHNICAL INSPECTION REPORT", report_title_style)
+            ],
+            [
+                Paragraph("Medical & Surgical Equipment Division | Colombo, Sri Lanka", company_sub_style),
+                Paragraph("LAP SCAN & SERVICE DIAGNOSTICS", report_sub_style)
+            ]
+        ]
         
-        for name in possible_names:
-            if os.path.exists(name):
-                header_img_path = name
-                break
-
-        if header_img_path:
-            story.append(RLImage(header_img_path, width=535, height=72))
-            story.append(Spacer(1, 8))
-        else:
-            story.append(Paragraph("BIOMED INTERNATIONAL (PVT) LTD", title_style))
-            story.append(Spacer(1, 2))
-            story.append(Paragraph("TECHNICAL INSPECTION & LAP SCAN REPORT", subtitle_style))
-            story.append(Spacer(1, 6))
-            story.append(HRFlowable(width="100%", thickness=2, color=navy_primary, spaceAfter=10))
+        t_custom_header = Table(header_table_content, colWidths=[335, 200])
+        t_custom_header.setStyle(TableStyle([
+            ('BACKGROUND', (0,0), (-1,-1), navy_primary),
+            ('VALIGN', (0,0), (-1,-1), 'MIDDLE'),
+            ('TOPPADDING', (0,0), (-1,-1), 8),
+            ('BOTTOMPADDING', (0,0), (-1,-1), 8),
+            ('LEFTPADDING', (0,0), (-1,-1), 10),
+            ('RIGHTPADDING', (0,0), (-1,-1), 10),
+            ('LINEBELOW', (0,1), (-1,1), 2, gold_accent)
+        ]))
+        
+        story.append(t_custom_header)
+        story.append(Spacer(1, 10))
 
         # --- METADATA HEADER BOX ---
         header_data = [
