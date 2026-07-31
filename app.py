@@ -3,6 +3,7 @@ import pandas as pd
 import datetime
 import io
 import os
+import requests
 from PIL import Image, ImageOps
 from google import genai
 from reportlab.lib.pagesizes import letter
@@ -10,8 +11,44 @@ from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, Tabl
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.lib import colors
 
+# Streamlit Lottie Integration
+try:
+    from streamlit_lottie import st_lottie
+except ImportError:
+    st_lottie = None
+
 # Page Config
 st.set_page_config(page_title="Biomed International - AI Report Generator", page_icon="🏥", layout="wide")
+
+# --- HIDE STREAMLIT HEADER, FOOTER, & MANAGE APP BUTTON ---
+hide_st_style = """
+            <style>
+            #MainMenu {visibility: hidden;}
+            header {visibility: hidden;}
+            footer {visibility: hidden;}
+            div[data-testid="stToolbar"] {visibility: hidden !important;}
+            div[data-testid="stDecoration"] {visibility: hidden !important;}
+            div[data-testid="stStatusWidget"] {visibility: hidden !important;}
+            .stAppHeader {display: none;}
+            section[data-testid="stSidebar"] + div button {display: none;}
+            </style>
+            """
+st.markdown(hide_st_style, unsafe_allow_html=True)
+
+# Helper function to load Lottie Animation from URL
+@st.cache_data
+def load_lottieurl(url: str):
+    try:
+        r = requests.get(url, timeout=5)
+        if r.status_code != 200:
+            return None
+        return r.json()
+    except Exception:
+        return None
+
+# Medical/Scanning Loader Animation URL
+LOTTIE_LOADER_URL = "https://assets9.lottiefiles.com/packages/lf20_tijmp233.json"
+lottie_scanning = load_lottieurl(LOTTIE_LOADER_URL)
 
 # Initialize Gemini Client
 GEMINI_API_KEY = st.secrets.get("GEMINI_API_KEY", os.environ.get("GEMINI_API_KEY", ""))
@@ -256,11 +293,20 @@ for i in range(st.session_state.instruments_count):
 
         if uploaded_file and GEMINI_API_KEY:
             if st.button(f"🤖 AI Auto-Detect Damage for #{i+1}", key=f"ai_btn_{i}"):
-                with st.spinner("Analyzing image with Gemini AI..."):
-                    ai_damage, ai_rec = analyze_damage_with_ai(uploaded_file, instrument_name)
-                    st.session_state[f"dam_{i}"] = ai_damage
-                    st.session_state[f"rec_{i}"] = ai_rec
-                    st.success("Analysis Complete!")
+                # --- ANIMATION WHILE WAITING ---
+                anim_placeholder = st.empty()
+                with anim_placeholder.container():
+                    if lottie_scanning and st_lottie:
+                        st_lottie(lottie_scanning, height=150, key=f"lot_{i}")
+                    else:
+                        st.spinner("Analyzing image with Gemini AI...")
+                
+                ai_damage, ai_rec = analyze_damage_with_ai(uploaded_file, instrument_name)
+                
+                anim_placeholder.empty() # Clear animation after finish
+                st.session_state[f"dam_{i}"] = ai_damage
+                st.session_state[f"rec_{i}"] = ai_rec
+                st.success("Analysis Complete!")
 
         damage_details = st.text_area(f"Details of Damage #{i+1}", key=f"dam_{i}", placeholder="Enter or AI-detect damage details...")
         
@@ -292,6 +338,13 @@ remarks = st.text_area("General Remarks", value="All above instruments require o
 
 # --- GENERATE PDF REPORT ---
 if st.button("📄 Generate Professional PDF Report", type="primary", use_container_width=True):
+    pdf_anim_placeholder = st.empty()
+    with pdf_anim_placeholder.container():
+        if lottie_scanning and st_lottie:
+            st_lottie(lottie_scanning, height=180, key="pdf_loading")
+        else:
+            st.spinner("Generating PDF Report...")
+
     buffer = io.BytesIO()
     doc = SimpleDocTemplate(
         buffer, 
@@ -331,7 +384,6 @@ if st.button("📄 Generate Professional PDF Report", type="primary", use_contai
             break
 
     if header_img_path:
-        # Full printable width = 552pt
         story.append(RLImage(header_img_path, width=552, height=75))
         story.append(Spacer(1, 8))
     else:
@@ -341,7 +393,7 @@ if st.button("📄 Generate Professional PDF Report", type="primary", use_contai
         story.append(Spacer(1, 6))
         story.append(HRFlowable(width="100%", thickness=2, color=navy_primary, spaceAfter=10))
 
-    # --- METADATA HEADER BOX (NAVY THEMED) ---
+    # --- METADATA HEADER BOX ---
     header_data = [
         [Paragraph("Customer / Hospital:", label_style), Paragraph(hospital_name, value_style), Paragraph("Brand:", label_style), Paragraph("Aesculap", value_style)],
         [Paragraph("Inspection Date:", label_style), Paragraph(inspection_date_str, value_style), Paragraph("System / Set:", label_style), Paragraph("Laparoscopy", value_style)],
@@ -364,7 +416,7 @@ if st.button("📄 Generate Professional PDF Report", type="primary", use_contai
     story.append(t_header)
     story.append(Spacer(1, 12))
     
-    # --- INSTRUMENTS TABLE (TOTAL WIDTH = 552 PT) ---
+    # --- INSTRUMENTS TABLE ---
     table_data = [[
         Paragraph("#", th_style), 
         Paragraph("PHOTO", th_style), 
@@ -382,7 +434,7 @@ if st.button("📄 Generate Professional PDF Report", type="primary", use_contai
             temp_img_path = f"temp_inst_{idx}.jpg"
             img = process_and_compress_image(item["image"], max_size=(500, 500))
             img = img.convert("RGB")
-            img.save(temp_temp_img_path := temp_img_path, "JPEG", quality=80)
+            img.save(temp_img_path, "JPEG", quality=80)
             
             img_obj = RLImage(temp_img_path, width=65, height=65)
             temp_files_to_remove.append(temp_img_path)
@@ -400,7 +452,6 @@ if st.button("📄 Generate Professional PDF Report", type="primary", use_contai
             Paragraph(rec_html, cell_center)
         ])
     
-    # Column width tuning to avoid awkward text wrapping
     t_main = Table(table_data, colWidths=[24, 75, 80, 138, 135, 100])
     t_main.setStyle(TableStyle([
         ('BACKGROUND', (0,0), (-1,0), navy_primary),
@@ -426,7 +477,7 @@ if st.button("📄 Generate Professional PDF Report", type="primary", use_contai
     story.append(t_remarks)
     story.append(Spacer(1, 20))
     
-    # --- SIGNATURE SECTION (NAVY ACCENTS) ---
+    # --- SIGNATURE SECTION ---
     sig_label_style = ParagraphStyle('SigLabel', parent=cell_style, fontSize=8.5, leading=12, textColor=navy_primary)
     t_sig = Table([[
         Paragraph(f"<b>Inspected By ({technician_name}):</b><br/><br/><br/>__________________________________<br/>Signature & Date", sig_label_style),
@@ -435,7 +486,6 @@ if st.button("📄 Generate Professional PDF Report", type="primary", use_contai
     
     story.append(t_sig)
     
-    # Build Document
     doc.build(story)
     buffer.seek(0)
     
@@ -444,6 +494,7 @@ if st.button("📄 Generate Professional PDF Report", type="primary", use_contai
         if os.path.exists(tf):
             os.remove(tf)
         
+    pdf_anim_placeholder.empty() # Clear loading animation
     st.success("Executive PDF Report Generated!")
     st.download_button(
         label="📥 Download Professional PDF Report",
