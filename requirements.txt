@@ -4,4 +4,3 @@ reportlab
 pandas
 openpyxl
 google-genai
-streamlit-lottie
