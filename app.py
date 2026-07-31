@@ -5,7 +5,7 @@ import io
 import os
 from PIL import Image, ImageOps
 from google import genai
-from reportlab.lib.pagesizes import letter
+from reportlab.lib.pagesizes import A4
 from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, Image as RLImage, HRFlowable
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.lib import colors
@@ -151,7 +151,7 @@ def process_and_compress_image(image_file, max_size=(800, 800)):
     img.thumbnail(max_size, Image.Resampling.LANCZOS)
     return img
 
-# AI Image Analysis Function (Updated to gemini-2.0-flash)
+# AI Image Analysis Function
 def analyze_damage_with_ai(image_file, item_name):
     if not client:
         return "API Key not configured properly.", "OK"
@@ -227,7 +227,7 @@ def remove_instrument():
 instrument_entries = []
 
 for i in range(st.session_state.instruments_count):
-    st.markdown(f"#### 🔪 Instrument Entry #{i+1}")
+    st.markdown(f"#### 🩺 Instrument Entry #{i+1}")
     col1, col2 = st.columns([1, 2])
     
     if f"art_{i}" not in st.session_state:
@@ -260,7 +260,7 @@ for i in range(st.session_state.instruments_count):
                     ai_damage, ai_rec = analyze_damage_with_ai(uploaded_file, instrument_name)
                     st.session_state[f"dam_{i}"] = ai_damage
                     st.session_state[f"rec_{i}"] = ai_rec
-                    st.success("Analysis Complete!")
+                st.success("Analysis Complete!")
 
         damage_details = st.text_area(f"Details of Damage #{i+1}", key=f"dam_{i}", placeholder="Enter or AI-detect damage details...")
         
@@ -290,163 +290,161 @@ st.divider()
 
 remarks = st.text_area("General Remarks", value="All above instruments require official inspection and technical servicing. Please review the recommended actions.")
 
-# --- GENERATE PDF REPORT ---
+# --- GENERATE PDF REPORT (A4 SIZE) ---
 if st.button("📄 Generate Professional PDF Report", type="primary", use_container_width=True):
-    buffer = io.BytesIO()
-    doc = SimpleDocTemplate(
-        buffer, 
-        pagesize=letter, 
-        rightMargin=30, 
-        leftMargin=30, 
-        topMargin=25, 
-        bottomMargin=25
-    )
-    story = []
-    styles = getSampleStyleSheet()
-    
-    # --- COLOR PALETTE (ELEGANT NAVY BLUE THEME) ---
-    navy_primary = colors.HexColor('#0D2A4A')    # Deep Executive Navy
-    navy_accent = colors.HexColor('#1E3A8A')     # Soft Navy Accent
-    ice_blue_bg = colors.HexColor('#F0F4F8')     # Light Tint BG
-    border_navy = colors.HexColor('#BAC7D5')     # Clean Slate Navy Border
-    
-    # --- PARAGRAPH STYLES ---
-    title_style = ParagraphStyle('HeaderTitle', parent=styles['Heading1'], fontSize=16, leading=18, textColor=navy_primary, fontName='Helvetica-Bold')
-    subtitle_style = ParagraphStyle('HeaderSubtitle', parent=styles['Normal'], fontSize=11, leading=14, textColor=navy_accent, fontName='Helvetica-Bold')
-    
-    label_style = ParagraphStyle('LabelNavy', parent=styles['Normal'], fontSize=8.5, leading=11, textColor=navy_primary, fontName='Helvetica-Bold')
-    value_style = ParagraphStyle('ValueText', parent=styles['Normal'], fontSize=8.5, leading=11, textColor=colors.HexColor('#1F2937'), fontName='Helvetica')
-    
-    th_style = ParagraphStyle('TableHeader', parent=styles['Normal'], fontSize=8.5, leading=11, textColor=colors.white, fontName='Helvetica-Bold', alignment=1)
-    cell_style = ParagraphStyle('TableCell', parent=styles['Normal'], fontSize=8, leading=11, textColor=colors.HexColor('#222222'), fontName='Helvetica')
-    cell_center = ParagraphStyle('TableCellCenter', parent=cell_style, alignment=1)
-
-    # --- LETTERHEAD IMAGE CHECK ---
-    header_img_path = None
-    possible_names = ['header.PNG', 'header.png', 'header.jpg', 'header.jpeg', 'header.png.PNG', 'header.PNG.png']
-    
-    for name in possible_names:
-        if os.path.exists(name):
-            header_img_path = name
-            break
-
-    if header_img_path:
-        # Full printable width = 552pt
-        story.append(RLImage(header_img_path, width=552, height=75))
-        story.append(Spacer(1, 8))
-    else:
-        story.append(Paragraph("BIOMED INTERNATIONAL (PVT) LTD", title_style))
-        story.append(Spacer(1, 2))
-        story.append(Paragraph("TECHNICAL INSPECTION & LAP SCAN REPORT", subtitle_style))
-        story.append(Spacer(1, 6))
-        story.append(HRFlowable(width="100%", thickness=2, color=navy_primary, spaceAfter=10))
-
-    # --- METADATA HEADER BOX (NAVY THEMED) ---
-    header_data = [
-        [Paragraph("Customer / Hospital:", label_style), Paragraph(hospital_name, value_style), Paragraph("Brand:", label_style), Paragraph("Aesculap", value_style)],
-        [Paragraph("Inspection Date:", label_style), Paragraph(inspection_date_str, value_style), Paragraph("System / Set:", label_style), Paragraph("Laparoscopy", value_style)],
-        [Paragraph("Technician Name:", label_style), Paragraph(technician_name, value_style), Paragraph("Scope Serial No:", label_style), Paragraph("N/A", value_style)],
-        [Paragraph("Report No:", label_style), Paragraph(report_no if report_no else "N/A", value_style), Paragraph("Camera System:", label_style), Paragraph("N/A", value_style)],
-        [Paragraph("Department:", label_style), Paragraph(department, value_style), Paragraph("Light Source:", label_style), Paragraph("N/A", value_style)]
-    ]
-    
-    t_header = Table(header_data, colWidths=[105, 171, 105, 171])
-    t_header.setStyle(TableStyle([
-        ('BACKGROUND', (0,0), (-1,-1), ice_blue_bg),
-        ('BOX', (0,0), (-1,-1), 1, navy_primary),
-        ('INNERGRID', (0,0), (-1,-1), 0.5, border_navy),
-        ('VALIGN', (0,0), (-1,-1), 'MIDDLE'),
-        ('TOPPADDING', (0,0), (-1,-1), 4),
-        ('BOTTOMPADDING', (0,0), (-1,-1), 4),
-        ('LEFTPADDING', (0,0), (-1,-1), 8),
-        ('RIGHTPADDING', (0,0), (-1,-1), 8),
-    ]))
-    story.append(t_header)
-    story.append(Spacer(1, 12))
-    
-    # --- INSTRUMENTS TABLE (TOTAL WIDTH = 552 PT) ---
-    table_data = [[
-        Paragraph("#", th_style), 
-        Paragraph("PHOTO", th_style), 
-        Paragraph("ARTICLE NO", th_style),
-        Paragraph("INSTRUMENT NAME", th_style), 
-        Paragraph("DETAILS OF DAMAGE", th_style), 
-        Paragraph("RECOMMENDATION", th_style)
-    ]]
-    
-    temp_files_to_remove = []
-    
-    for idx, item in enumerate(instrument_entries):
-        img_obj = Paragraph("No Image", cell_center)
-        if item["image"] is not None:
-            temp_img_path = f"temp_inst_{idx}.jpg"
-            img = process_and_compress_image(item["image"], max_size=(500, 500))
-            img = img.convert("RGB")
-            img.save(temp_temp_img_path := temp_img_path, "JPEG", quality=80)
-            
-            img_obj = RLImage(temp_img_path, width=65, height=65)
-            temp_files_to_remove.append(temp_img_path)
-            
-        rec = item["recommendation"]
-        rec_color = "#C0392B" if rec == "Replace" else ("#D35400" if rec in ["Service", "Repair"] else "#27AE60")
-        rec_html = f"<b><font color='{rec_color}'>{rec.upper()}</font></b>"
-            
-        table_data.append([
-            Paragraph(f"<b>{idx + 1}</b>", cell_center),
-            img_obj,
-            Paragraph(f"<b>{item['article_no']}</b>", cell_style),
-            Paragraph(item["instrument_name"], cell_style),
-            Paragraph(item["damage"].replace('\n', '<br/>'), cell_style),
-            Paragraph(rec_html, cell_center)
-        ])
-    
-    # Column width tuning to avoid awkward text wrapping
-    t_main = Table(table_data, colWidths=[24, 75, 80, 138, 135, 100])
-    t_main.setStyle(TableStyle([
-        ('BACKGROUND', (0,0), (-1,0), navy_primary),
-        ('VALIGN', (0,0), (-1,-1), 'MIDDLE'),
-        ('GRID', (0,0), (-1,-1), 0.5, border_navy),
-        ('TOPPADDING', (0,0), (-1,-1), 6),
-        ('BOTTOMPADDING', (0,0), (-1,-1), 6),
-        ('LEFTPADDING', (0,0), (-1,-1), 4),
-        ('RIGHTPADDING', (0,0), (-1,-1), 4),
-    ]))
-    
-    story.append(t_main)
-    story.append(Spacer(1, 12))
-    
-    # --- GENERAL REMARKS BOX ---
-    remarks_html = f"<b><font color='{navy_primary.hexval()}'>General Remarks & Technical Observations:</font></b><br/>{remarks}"
-    t_remarks = Table([[Paragraph(remarks_html, ParagraphStyle('RemarksStyle', parent=cell_style, fontSize=8.5, leading=12))]], colWidths=[552])
-    t_remarks.setStyle(TableStyle([
-        ('BACKGROUND', (0,0), (-1,-1), ice_blue_bg),
-        ('BOX', (0,0), (-1,-1), 1, navy_primary),
-        ('PADDING', (0,0), (-1,-1), 8)
-    ]))
-    story.append(t_remarks)
-    story.append(Spacer(1, 20))
-    
-    # --- SIGNATURE SECTION (NAVY ACCENTS) ---
-    sig_label_style = ParagraphStyle('SigLabel', parent=cell_style, fontSize=8.5, leading=12, textColor=navy_primary)
-    t_sig = Table([[
-        Paragraph(f"<b>Inspected By ({technician_name}):</b><br/><br/><br/>__________________________________<br/>Signature & Date", sig_label_style),
-        Paragraph("<b>Verified By (Hospital Authority):</b><br/><br/><br/>__________________________________<br/>Signature & Stamp", sig_label_style)
-    ]], colWidths=[276, 276])
-    
-    story.append(t_sig)
-    
-    # Build Document
-    doc.build(story)
-    buffer.seek(0)
-    
-    # Cleanup Temp Images
-    for tf in temp_files_to_remove:
-        if os.path.exists(tf):
-            os.remove(tf)
+    with st.spinner("Generating PDF Report..."):
+        buffer = io.BytesIO()
+        doc = SimpleDocTemplate(
+            buffer, 
+            pagesize=A4, 
+            rightMargin=30, 
+            leftMargin=30, 
+            topMargin=25, 
+            bottomMargin=25
+        )
+        story = []
+        styles = getSampleStyleSheet()
         
-    st.success("Executive PDF Report Generated!")
+        # --- COLOR PALETTE ---
+        navy_primary = colors.HexColor('#0D2A4A')
+        navy_accent = colors.HexColor('#1E3A8A')
+        ice_blue_bg = colors.HexColor('#F0F4F8')
+        border_navy = colors.HexColor('#BAC7D5')
+        
+        # --- PARAGRAPH STYLES ---
+        title_style = ParagraphStyle('HeaderTitle', parent=styles['Heading1'], fontSize=16, leading=18, textColor=navy_primary, fontName='Helvetica-Bold')
+        subtitle_style = ParagraphStyle('HeaderSubtitle', parent=styles['Normal'], fontSize=11, leading=14, textColor=navy_accent, fontName='Helvetica-Bold')
+        
+        label_style = ParagraphStyle('LabelNavy', parent=styles['Normal'], fontSize=8.5, leading=11, textColor=navy_primary, fontName='Helvetica-Bold')
+        value_style = ParagraphStyle('ValueText', parent=styles['Normal'], fontSize=8.5, leading=11, textColor=colors.HexColor('#1F2937'), fontName='Helvetica')
+        
+        th_style = ParagraphStyle('TableHeader', parent=styles['Normal'], fontSize=8.5, leading=11, textColor=colors.white, fontName='Helvetica-Bold', alignment=1)
+        cell_style = ParagraphStyle('TableCell', parent=styles['Normal'], fontSize=8, leading=11, textColor=colors.HexColor('#222222'), fontName='Helvetica')
+        cell_center = ParagraphStyle('TableCellCenter', parent=cell_style, alignment=1)
+
+        # --- LETTERHEAD IMAGE CHECK ---
+        header_img_path = None
+        possible_names = ['header.PNG', 'header.png', 'header.jpg', 'header.jpeg', 'header.png.PNG', 'header.PNG.png']
+        
+        for name in possible_names:
+            if os.path.exists(name):
+                header_img_path = name
+                break
+
+        if header_img_path:
+            story.append(RLImage(header_img_path, width=535, height=72))
+            story.append(Spacer(1, 8))
+        else:
+            story.append(Paragraph("BIOMED INTERNATIONAL (PVT) LTD", title_style))
+            story.append(Spacer(1, 2))
+            story.append(Paragraph("TECHNICAL INSPECTION & LAP SCAN REPORT", subtitle_style))
+            story.append(Spacer(1, 6))
+            story.append(HRFlowable(width="100%", thickness=2, color=navy_primary, spaceAfter=10))
+
+        # --- METADATA HEADER BOX ---
+        header_data = [
+            [Paragraph("Customer / Hospital:", label_style), Paragraph(hospital_name, value_style), Paragraph("Brand:", label_style), Paragraph("Aesculap", value_style)],
+            [Paragraph("Inspection Date:", label_style), Paragraph(inspection_date_str, value_style), Paragraph("System / Set:", label_style), Paragraph("Laparoscopy", value_style)],
+            [Paragraph("Technician Name:", label_style), Paragraph(technician_name, value_style), Paragraph("Scope Serial No:", label_style), Paragraph("N/A", value_style)],
+            [Paragraph("Report No:", label_style), Paragraph(report_no if report_no else "N/A", value_style), Paragraph("Camera System:", label_style), Paragraph("N/A", value_style)],
+            [Paragraph("Department:", label_style), Paragraph(department, value_style), Paragraph("Light Source:", label_style), Paragraph("N/A", value_style)]
+        ]
+        
+        t_header = Table(header_data, colWidths=[100, 167, 100, 168])
+        t_header.setStyle(TableStyle([
+            ('BACKGROUND', (0,0), (-1,-1), ice_blue_bg),
+            ('BOX', (0,0), (-1,-1), 1, navy_primary),
+            ('INNERGRID', (0,0), (-1,-1), 0.5, border_navy),
+            ('VALIGN', (0,0), (-1,-1), 'MIDDLE'),
+            ('TOPPADDING', (0,0), (-1,-1), 4),
+            ('BOTTOMPADDING', (0,0), (-1,-1), 4),
+            ('LEFTPADDING', (0,0), (-1,-1), 8),
+            ('RIGHTPADDING', (0,0), (-1,-1), 8),
+        ]))
+        story.append(t_header)
+        story.append(Spacer(1, 12))
+        
+        # --- INSTRUMENTS TABLE ---
+        table_data = [[
+            Paragraph("#", th_style), 
+            Paragraph("PHOTO", th_style), 
+            Paragraph("ARTICLE NO", th_style),
+            Paragraph("INSTRUMENT NAME", th_style), 
+            Paragraph("DETAILS OF DAMAGE", th_style), 
+            Paragraph("RECOMMENDATION", th_style)
+        ]]
+        
+        temp_files_to_remove = []
+        
+        for idx, item in enumerate(instrument_entries):
+            img_obj = Paragraph("No Image", cell_center)
+            if item["image"] is not None:
+                temp_img_path = f"temp_inst_{idx}.jpg"
+                img = process_and_compress_image(item["image"], max_size=(500, 500))
+                img = img.convert("RGB")
+                img.save(temp_img_path, "JPEG", quality=80)
+                
+                img_obj = RLImage(temp_img_path, width=60, height=60)
+                temp_files_to_remove.append(temp_img_path)
+                
+            rec = item["recommendation"]
+            rec_color = "#C0392B" if rec == "Replace" else ("#D35400" if rec in ["Service", "Repair"] else "#27AE60")
+            rec_html = f"<b><font color='{rec_color}'>{rec.upper()}</font></b>"
+                
+            table_data.append([
+                Paragraph(f"<b>{idx + 1}</b>", cell_center),
+                img_obj,
+                Paragraph(f"<b>{item['article_no']}</b>", cell_style),
+                Paragraph(item["instrument_name"], cell_style),
+                Paragraph(item["damage"].replace('\n', '<br/>'), cell_style),
+                Paragraph(rec_html, cell_center)
+            ])
+        
+        t_main = Table(table_data, colWidths=[20, 70, 80, 135, 135, 95])
+        t_main.setStyle(TableStyle([
+            ('BACKGROUND', (0,0), (-1,0), navy_primary),
+            ('VALIGN', (0,0), (-1,-1), 'MIDDLE'),
+            ('GRID', (0,0), (-1,-1), 0.5, border_navy),
+            ('TOPPADDING', (0,0), (-1,-1), 5),
+            ('BOTTOMPADDING', (0,0), (-1,-1), 5),
+            ('LEFTPADDING', (0,0), (-1,-1), 4),
+            ('RIGHTPADDING', (0,0), (-1,-1), 4),
+        ]))
+        
+        story.append(t_main)
+        story.append(Spacer(1, 12))
+        
+        # --- GENERAL REMARKS BOX ---
+        remarks_html = f"<b><font color='{navy_primary.hexval()}'>General Remarks & Technical Observations:</font></b><br/>{remarks}"
+        t_remarks = Table([[Paragraph(remarks_html, ParagraphStyle('RemarksStyle', parent=cell_style, fontSize=8.5, leading=12))]], colWidths=[535])
+        t_remarks.setStyle(TableStyle([
+            ('BACKGROUND', (0,0), (-1,-1), ice_blue_bg),
+            ('BOX', (0,0), (-1,-1), 1, navy_primary),
+            ('PADDING', (0,0), (-1,-1), 8)
+        ]))
+        story.append(t_remarks)
+        story.append(Spacer(1, 20))
+        
+        # --- SIGNATURE SECTION ---
+        sig_label_style = ParagraphStyle('SigLabel', parent=cell_style, fontSize=8.5, leading=12, textColor=navy_primary)
+        t_sig = Table([[
+            Paragraph(f"<b>Inspected By ({technician_name}):</b><br/><br/><br/>__________________________________<br/>Signature & Date", sig_label_style),
+            Paragraph("<b>Verified By (Hospital Authority):</b><br/><br/><br/>__________________________________<br/>Signature & Stamp", sig_label_style)
+        ]], colWidths=[267, 268])
+        
+        story.append(t_sig)
+        
+        doc.build(story)
+        buffer.seek(0)
+        
+        # Cleanup Temp Images
+        for tf in temp_files_to_remove:
+            if os.path.exists(tf):
+                os.remove(tf)
+
+    st.success("Executive A4 PDF Report Generated!")
     st.download_button(
-        label="📥 Download Professional PDF Report",
+        label="📥 Download Professional PDF Report (A4)",
         data=buffer,
         file_name=f"Lap_Scan_Report_{report_no.replace('/', '_') if report_no else 'Executive'}.pdf",
         mime="application/pdf"
