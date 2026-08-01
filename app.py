@@ -127,6 +127,23 @@ SL_HOSPITALS = [
     "Other (Type manually)"
 ]
 
+# Quick Damage Suggestions List
+DAMAGE_SUGGESTIONS = [
+    "-- Select Common Damage Suggestion --",
+    "Insulation damaged near the tip / shaft.",
+    "Insulation cracked and peeling off.",
+    "Jaws misaligned / teeth worn out.",
+    "Scissor blades blunt / notched.",
+    "Ratchet mechanism sticky / not locking.",
+    "Handle spring broken / loose tension.",
+    "Shaft bent / misaligned.",
+    "Scope lens scratched / internal moisture.",
+    "Light transmission low / dark image.",
+    "Severe surface corrosion & discoloration.",
+    "Normal wear & tear - needs servicing/overhaul.",
+    "No visible physical damage observed."
+]
+
 # Load Excel Catalog File
 EXCEL_FILE = "Full Laparoscopy Articles Updated master file 07.07.2026.xlsx"
 
@@ -166,7 +183,7 @@ def analyze_damage_with_ai(image_file, item_name):
         Line 1: Technical explanation of the damage (Maximum 20 words). If no damage, write "No visible defect/damage observed."
         Line 2: Single-word Recommendation (Choose strictly one: Replace, Repair, Service, or OK).
         """
-        response = client.models.generate_content(
+        response = client.models.generate_generate_content(
             model='gemini-2.0-flash',
             contents=[compressed_img, prompt]
         )
@@ -217,6 +234,11 @@ def update_instrument_name(index):
     if selected_art:
         st.session_state[f"name_{index}"] = catalog_dict.get(selected_art, "")
 
+def update_damage_from_suggestion(index):
+    selected_sug = st.session_state.get(f"sug_{index}")
+    if selected_sug and not selected_sug.startswith("--"):
+        st.session_state[f"dam_{index}"] = selected_sug
+
 def add_instrument():
     st.session_state.instruments_count += 1
 
@@ -234,6 +256,8 @@ for i in range(st.session_state.instruments_count):
         st.session_state[f"art_{i}"] = None
     if f"name_{i}" not in st.session_state:
         st.session_state[f"name_{i}"] = ""
+    if f"dam_{i}" not in st.session_state:
+        st.session_state[f"dam_{i}"] = ""
 
     with col1:
         uploaded_file = st.file_uploader(f"Upload Photo #{i+1}", type=["jpg", "jpeg", "png"], key=f"img_{i}")
@@ -262,7 +286,20 @@ for i in range(st.session_state.instruments_count):
                     st.session_state[f"rec_{i}"] = ai_rec
                 st.success("Analysis Complete!")
 
-        damage_details = st.text_area(f"Details of Damage #{i+1}", key=f"dam_{i}", placeholder="Enter or AI-detect damage details...")
+        # Quick Suggestion Dropdown for Damage
+        st.selectbox(
+            f"💡 Quick Damage Suggestions #{i+1}",
+            options=DAMAGE_SUGGESTIONS,
+            key=f"sug_{i}",
+            on_change=update_damage_from_suggestion,
+            args=(i,)
+        )
+
+        damage_details = st.text_area(
+            f"Details of Damage #{i+1}", 
+            key=f"dam_{i}", 
+            placeholder="Select from suggestions above, use AI, or type manually..."
+        )
         
         rec_options = ["Replace", "Service", "Repair", "OK"]
         curr_rec = st.session_state.get(f"rec_{i}", "Service")
