@@ -127,21 +127,39 @@ SL_HOSPITALS = [
     "Other (Type manually)"
 ]
 
-# Quick Damage Suggestions List
+# Detailed Technical Damage Suggestions
 DAMAGE_SUGGESTIONS = [
-    "-- Select Common Damage Suggestion --",
-    "Insulation damaged near the tip / shaft.",
-    "Insulation cracked and peeling off.",
-    "Jaws misaligned / teeth worn out.",
-    "Scissor blades blunt / notched.",
-    "Ratchet mechanism sticky / not locking.",
-    "Handle spring broken / loose tension.",
-    "Shaft bent / misaligned.",
-    "Scope lens scratched / internal moisture.",
-    "Light transmission low / dark image.",
-    "Severe surface corrosion & discoloration.",
-    "Normal wear & tear - needs servicing/overhaul.",
-    "No visible physical damage observed."
+    "-- Select Detailed Technical Damage --",
+    
+    # 1. SHAFT & INSULATION ISSUES
+    "Insulation Damage: Insulation layer cracked/peeled near the shaft tip. High risk of stray electrical current leaks (HF insulation failure) during diathermy.",
+    "Insulation Burn: High-voltage insulation micro-cracks and surface burns detected along the shaft. Requires immediate re-insulation before clinical use.",
+    "Shaft Deformation: Outer shaft tube is visibly bent/misaligned, causing severe internal friction and restricting smooth jaw articulation.",
+    
+    # 2. JAWS & WORKING END ISSUES
+    "Jaw Alignment Failure: Working jaws are misaligned with worn-out gripping teeth. Instrument fails to hold tissue securely during retraction.",
+    "Scissor Blade Bluntness: Scissor blades show heavy dullness, notches, and burrs along the cutting edge. Tissue slipping observed; fails clean cutting.",
+    "Jaw Joint Play: Excessive mechanical play and looseness at the distal joint pin. Causes uneven jaw closing force and unstable grip.",
+    "Bipolar/Monopolar Tip Wear: Coagulation tips show severe thermal pitting, carbon deposits, and eroded conductive surfaces.",
+    
+    # 3. HANDLE & RATCHET MECHANISM
+    "Ratchet Lock Failure: Lock mechanism/ratchet teeth are severely worn out. Handle fails to hold locking position under tension, slipping during use.",
+    "Spring & Tension Issue: Internal handle spring mechanism is broken or lost tension. Handle fails to return to neutral open position automatically.",
+    "Handle Joint Wear: Connecting linkages between handle and inner rod show excessive wear, reducing force transmission to the jaws.",
+    
+    # 4. OPTICAL LAPAROSCOPES (SCOPES)
+    "Distal Lens Damage: Objective lens at the distal tip is scratched/cracked. Causes blurriness, distortion, and optical artifacts in the surgical field.",
+    "Internal Moisture / Fogging: Internal optical sealing compromised. Severe internal fogging and moisture droplets observed inside optical tube when heated.",
+    "Fiber Optic Bundle Damage: Multiple fiber optic light fibers broken inside scope tube. Optical image shows dark spots and reduced overall light brightness.",
+    
+    # 5. LIGHT CABLES & ACCESSORIES
+    "Light Cable Fiber Breakage: High percentage of internal glass fiber bundles broken (>30%). Results in poor illumination and dark surgical view.",
+    "Cable Connector Discoloration: Stainless steel light post connectors burnt and discolored from excessive heat; degraded light entry coupling.",
+    
+    # 6. GENERAL & OVERHAUL
+    "Corrosion & Pitting: Severe pitting corrosion, rust stains, and surface oxidation observed near joints and laser markings due to improper chemical sterilization.",
+    "General Overhaul Required: Cumulative mechanical wear and friction across all moving components. Full servicing, alignment, and seal replacement needed.",
+    "Pass Inspection: Instrument in optimal condition. No physical defect, electrical leak, or optical distortion observed during inspection."
 ]
 
 # Load Excel Catalog File
@@ -180,10 +198,10 @@ def analyze_damage_with_ai(image_file, item_name):
         Examine the provided image carefully and identify physical damage, cracks, dents, insulation damage, or wear and tear.
 
         Provide your analysis strictly in two lines:
-        Line 1: Technical explanation of the damage (Maximum 20 words). If no damage, write "No visible defect/damage observed."
+        Line 1: Detailed technical explanation of the damage (Maximum 25 words). Include defect & clinical risk. If no damage, write "No visible defect/damage observed."
         Line 2: Single-word Recommendation (Choose strictly one: Replace, Repair, Service, or OK).
         """
-        response = client.models.generate_generate_content(
+        response = client.models.generate_content(
             model='gemini-2.0-flash',
             contents=[compressed_img, prompt]
         )
@@ -286,7 +304,7 @@ for i in range(st.session_state.instruments_count):
                     st.session_state[f"rec_{i}"] = ai_rec
                 st.success("Analysis Complete!")
 
-        # Quick Suggestion Dropdown for Damage
+        # Detailed Quick Suggestion Dropdown
         st.selectbox(
             f"💡 Quick Damage Suggestions #{i+1}",
             options=DAMAGE_SUGGESTIONS,
@@ -298,7 +316,7 @@ for i in range(st.session_state.instruments_count):
         damage_details = st.text_area(
             f"Details of Damage #{i+1}", 
             key=f"dam_{i}", 
-            placeholder="Select from suggestions above, use AI, or type manually..."
+            placeholder="Select from detailed suggestions above, use AI, or type manually..."
         )
         
         rec_options = ["Replace", "Service", "Repair", "OK"]
