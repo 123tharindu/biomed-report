@@ -505,7 +505,7 @@ if st.button("📄 Generate Professional PDF Report", type="primary", use_contai
             canvas.saveState()
             canvas.setFont('Helvetica-BoldOblique', 8)
             canvas.setFillColor(colors.HexColor('#7F8C8D'))
-            canvas.drawCentredString(A4[0] / 2.0, 15, "POWERED BY BIOMED")
+            canvas.drawCentredString(A4[0] / 2.0, 15, "POWERED BY BIOMED INTERNATIONAL (PVT) LTD")
             canvas.restoreState()
 
         doc.build(story, onFirstPage=add_footer, onLaterPages=add_footer)
