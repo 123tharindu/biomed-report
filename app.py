@@ -6,9 +6,16 @@ import os
 from PIL import Image, ImageOps
 from google import genai
 from reportlab.lib.pagesizes import A4
-from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, Image as RLImage, HRFlowable
+from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, Image as RLImage
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.lib import colors
+
+# Image preview සඳහා pdf2image import කිරීම
+try:
+    from pdf2image import convert_from_bytes
+    PDF2IMAGE_AVAILABLE = True
+except ImportError:
+    PDF2IMAGE_AVAILABLE = False
 
 # Page Config
 st.set_page_config(page_title="Biomed International - AI Report Generator", page_icon="🏥", layout="wide")
@@ -130,33 +137,21 @@ SL_HOSPITALS = [
 # Detailed Technical Damage Suggestions
 DAMAGE_SUGGESTIONS = [
     "-- Select Detailed Technical Damage --",
-    
-    # 1. SHAFT & INSULATION ISSUES
     "Insulation Damage: Insulation layer cracked/peeled near the shaft tip. High risk of stray electrical current leaks (HF insulation failure) during diathermy.",
     "Insulation Burn: High-voltage insulation micro-cracks and surface burns detected along the shaft. Requires immediate re-insulation before clinical use.",
     "Shaft Deformation: Outer shaft tube is visibly bent/misaligned, causing severe internal friction and restricting smooth jaw articulation.",
-    
-    # 2. JAWS & WORKING END ISSUES
     "Jaw Alignment Failure: Working jaws are misaligned with worn-out gripping teeth. Instrument fails to hold tissue securely during retraction.",
     "Scissor Blade Bluntness: Scissor blades show heavy dullness, notches, and burrs along the cutting edge. Tissue slipping observed; fails clean cutting.",
     "Jaw Joint Play: Excessive mechanical play and looseness at the distal joint pin. Causes uneven jaw closing force and unstable grip.",
     "Bipolar/Monopolar Tip Wear: Coagulation tips show severe thermal pitting, carbon deposits, and eroded conductive surfaces.",
-    
-    # 3. HANDLE & RATCHET MECHANISM
     "Ratchet Lock Failure: Lock mechanism/ratchet teeth are severely worn out. Handle fails to hold locking position under tension, slipping during use.",
     "Spring & Tension Issue: Internal handle spring mechanism is broken or lost tension. Handle fails to return to neutral open position automatically.",
     "Handle Joint Wear: Connecting linkages between handle and inner rod show excessive wear, reducing force transmission to the jaws.",
-    
-    # 4. OPTICAL LAPAROSCOPES (SCOPES)
     "Distal Lens Damage: Objective lens at the distal tip is scratched/cracked. Causes blurriness, distortion, and optical artifacts in the surgical field.",
     "Internal Moisture / Fogging: Internal optical sealing compromised. Severe internal fogging and moisture droplets observed inside optical tube when heated.",
     "Fiber Optic Bundle Damage: Multiple fiber optic light fibers broken inside scope tube. Optical image shows dark spots and reduced overall light brightness.",
-    
-    # 5. LIGHT CABLES & ACCESSORIES
     "Light Cable Fiber Breakage: High percentage of internal glass fiber bundles broken (>30%). Results in poor illumination and dark surgical view.",
     "Cable Connector Discoloration: Stainless steel light post connectors burnt and discolored from excessive heat; degraded light entry coupling.",
-    
-    # 6. GENERAL & OVERHAUL
     "Corrosion & Pitting: Severe pitting corrosion, rust stains, and surface oxidation observed near joints and laser markings due to improper chemical sterilization.",
     "General Overhaul Required: Cumulative mechanical wear and friction across all moving components. Full servicing, alignment, and seal replacement needed.",
     "Pass Inspection: Instrument in optimal condition. No physical defect, electrical leak, or optical distortion observed during inspection."
@@ -221,6 +216,8 @@ def analyze_damage_with_ai(image_file, item_name):
 
 # Sidebar Inputs
 st.sidebar.header("📋 Report Details")
+
+company_logo_file = st.sidebar.file_uploader("Override Company Logo (Optional)", type=["png", "jpg", "jpeg"])
 
 selected_hospital = st.sidebar.selectbox("Customer / Hospital", options=SL_HOSPITALS, index=1)
 
@@ -304,7 +301,6 @@ for i in range(st.session_state.instruments_count):
                     st.session_state[f"rec_{i}"] = ai_rec
                 st.success("Analysis Complete!")
 
-        # Detailed Quick Suggestion Dropdown
         st.selectbox(
             f"💡 Quick Damage Suggestions #{i+1}",
             options=DAMAGE_SUGGESTIONS,
@@ -359,20 +355,20 @@ if st.button("📄 Generate Professional PDF Report", type="primary", use_contai
         )
         story = []
         styles = getSampleStyleSheet()
+        temp_files_to_remove = []
         
         # --- COLOR PALETTE ---
         navy_primary = colors.HexColor('#0D2A4A')
         navy_accent = colors.HexColor('#1E3A8A')
         ice_blue_bg = colors.HexColor('#F0F4F8')
         border_navy = colors.HexColor('#BAC7D5')
-        gold_accent = colors.HexColor('#D4AF37')
         
         # --- PARAGRAPH STYLES ---
-        company_name_style = ParagraphStyle('CompName', parent=styles['Heading1'], fontSize=15, leading=17, textColor=colors.white, fontName='Helvetica-Bold')
-        company_sub_style = ParagraphStyle('CompSub', parent=styles['Normal'], fontSize=7.5, leading=10, textColor=colors.HexColor('#CBD5E1'), fontName='Helvetica')
+        company_name_style = ParagraphStyle('CompName', parent=styles['Heading1'], fontSize=13, leading=15, textColor=navy_primary, fontName='Helvetica-Bold')
+        company_sub_style = ParagraphStyle('CompSub', parent=styles['Normal'], fontSize=7.5, leading=10, textColor=colors.HexColor('#475569'), fontName='Helvetica')
         
-        report_title_style = ParagraphStyle('RepTitle', parent=styles['Normal'], fontSize=11, leading=13, textColor=colors.white, fontName='Helvetica-Bold', alignment=2)
-        report_sub_style = ParagraphStyle('RepSub', parent=styles['Normal'], fontSize=8, leading=10, textColor=gold_accent, fontName='Helvetica-Bold', alignment=2)
+        report_title_style = ParagraphStyle('RepTitle', parent=styles['Normal'], fontSize=11, leading=13, textColor=navy_primary, fontName='Helvetica-Bold', alignment=2)
+        report_sub_style = ParagraphStyle('RepSub', parent=styles['Normal'], fontSize=8, leading=10, textColor=navy_accent, fontName='Helvetica-Bold', alignment=2)
 
         label_style = ParagraphStyle('LabelNavy', parent=styles['Normal'], fontSize=8.5, leading=11, textColor=navy_primary, fontName='Helvetica-Bold')
         value_style = ParagraphStyle('ValueText', parent=styles['Normal'], fontSize=8.5, leading=11, textColor=colors.HexColor('#1F2937'), fontName='Helvetica')
@@ -381,10 +377,29 @@ if st.button("📄 Generate Professional PDF Report", type="primary", use_contai
         cell_style = ParagraphStyle('TableCell', parent=styles['Normal'], fontSize=8, leading=11, textColor=colors.HexColor('#222222'), fontName='Helvetica')
         cell_center = ParagraphStyle('TableCellCenter', parent=cell_style, alignment=1)
 
-        # --- CODE-GENERATED EXECUTIVE LETTERHEAD HEADER ---
+        # --- LOGO HANDLING ---
+        logo_cell = Paragraph("<b>BIOMED INTERNATIONAL</b>", company_name_style)
+        
+        target_logo_source = None
+        if company_logo_file is not None:
+            target_logo_source = company_logo_file
+        elif os.path.exists("logo.png"):
+            target_logo_source = "logo.png"
+        elif os.path.exists("logo.jpg"):
+            target_logo_source = "logo.jpg"
+
+        if target_logo_source is not None:
+            temp_logo_path = "temp_company_logo.png"
+            logo_img = Image.open(target_logo_source)
+            logo_img.thumbnail((160, 60), Image.Resampling.LANCZOS)
+            logo_img.save(temp_logo_path, "PNG")
+            logo_cell = RLImage(temp_logo_path, width=120, height=45)
+            temp_files_to_remove.append(temp_logo_path)
+
+        # --- HEADER TABLE ---
         header_table_content = [
             [
-                Paragraph("<b>BIOMED INTERNATIONAL (PVT) LTD</b>", company_name_style),
+                logo_cell,
                 Paragraph("TECHNICAL INSPECTION REPORT", report_title_style)
             ],
             [
@@ -393,15 +408,16 @@ if st.button("📄 Generate Professional PDF Report", type="primary", use_contai
             ]
         ]
         
-        t_custom_header = Table(header_table_content, colWidths=[335, 200])
+        t_custom_header = Table(header_table_content, colWidths=[315, 220])
         t_custom_header.setStyle(TableStyle([
-            ('BACKGROUND', (0,0), (-1,-1), navy_primary),
+            ('BACKGROUND', (0,0), (-1,-1), ice_blue_bg),
             ('VALIGN', (0,0), (-1,-1), 'MIDDLE'),
-            ('TOPPADDING', (0,0), (-1,-1), 8),
-            ('BOTTOMPADDING', (0,0), (-1,-1), 8),
+            ('TOPPADDING', (0,0), (-1,-1), 6),
+            ('BOTTOMPADDING', (0,0), (-1,-1), 6),
             ('LEFTPADDING', (0,0), (-1,-1), 10),
             ('RIGHTPADDING', (0,0), (-1,-1), 10),
-            ('LINEBELOW', (0,1), (-1,1), 2, gold_accent)
+            ('BOX', (0,0), (-1,-1), 1, navy_primary),
+            ('LINEBELOW', (0,1), (-1,1), 1.5, navy_primary)
         ]))
         
         story.append(t_custom_header)
@@ -418,8 +434,8 @@ if st.button("📄 Generate Professional PDF Report", type="primary", use_contai
         
         t_header = Table(header_data, colWidths=[100, 167, 100, 168])
         t_header.setStyle(TableStyle([
-            ('BACKGROUND', (0,0), (-1,-1), ice_blue_bg),
-            ('BOX', (0,0), (-1,-1), 1, navy_primary),
+            ('BACKGROUND', (0,0), (-1,-1), colors.white),
+            ('BOX', (0,0), (-1,-1), 1, border_navy),
             ('INNERGRID', (0,0), (-1,-1), 0.5, border_navy),
             ('VALIGN', (0,0), (-1,-1), 'MIDDLE'),
             ('TOPPADDING', (0,0), (-1,-1), 4),
@@ -439,8 +455,6 @@ if st.button("📄 Generate Professional PDF Report", type="primary", use_contai
             Paragraph("DETAILS OF DAMAGE", th_style), 
             Paragraph("RECOMMENDATION", th_style)
         ]]
-        
-        temp_files_to_remove = []
         
         for idx, item in enumerate(instrument_entries):
             img_obj = Paragraph("No Image", cell_center)
@@ -500,16 +514,29 @@ if st.button("📄 Generate Professional PDF Report", type="primary", use_contai
         
         story.append(t_sig)
         
-        # --- FOOTER FUNCTION (POWERED BY BIOMED) ---
-        def add_footer(canvas, doc):
+        # --- WATERMARK & FOOTER FUNCTION ---
+        def add_watermark_and_footer(canvas, doc):
+            canvas.saveState()
+            
+            # 1. Background Watermark (Transparent Text)
+            canvas.setFont('Helvetica-Bold', 36)
+            canvas.setFillColor(colors.Color(0.85, 0.85, 0.85, alpha=0.3)) 
+            
+            canvas.translate(A4[0] / 2.0, A4[1] / 2.0)
+            canvas.rotate(45)
+            canvas.drawCentredString(0, 0, "BIOMED INTERNATIONAL")
+            
+            canvas.restoreState()
+            
+            # 2. Footer Text
             canvas.saveState()
             canvas.setFont('Helvetica-BoldOblique', 8)
             canvas.setFillColor(colors.HexColor('#7F8C8D'))
-            canvas.drawCentredString(A4[0] / 2.0, 15, "POWERED BY BIOMED INTERNATIONAL (PVT) LTD")
+            canvas.drawCentredString(A4[0] / 2.0, 15, "POWERED BY BIOMED INTERNATION")
             canvas.restoreState()
 
-        doc.build(story, onFirstPage=add_footer, onLaterPages=add_footer)
-        buffer.seek(0)
+        doc.build(story, onFirstPage=add_watermark_and_footer, onLaterPages=add_watermark_and_footer)
+        pdf_data = buffer.getvalue()
         
         # Cleanup Temp Images
         for tf in temp_files_to_remove:
@@ -517,9 +544,20 @@ if st.button("📄 Generate Professional PDF Report", type="primary", use_contai
                 os.remove(tf)
 
     st.success("Executive A4 PDF Report Generated!")
+    
+    # Live Preview (If pdf2image available)
+    if PDF2IMAGE_AVAILABLE:
+        try:
+            preview_images = convert_from_bytes(pdf_data, first_page=1, last_page=1)
+            if preview_images:
+                st.subheader("🖼️ PDF Live Image Preview")
+                st.image(preview_images[0], caption="Generated Technical Report Page 1", use_container_width=True)
+        except Exception as preview_err:
+            st.info("Download PDF to view official layout.")
+
     st.download_button(
         label="📥 Download Professional PDF Report (A4)",
-        data=buffer,
+        data=pdf_data,
         file_name=f"Lap_Scan_Report_{report_no.replace('/', '_') if report_no else 'Executive'}.pdf",
         mime="application/pdf"
     )
