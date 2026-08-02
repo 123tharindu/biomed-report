@@ -6,7 +6,7 @@ import os
 from PIL import Image, ImageOps
 from google import genai
 from reportlab.lib.pagesizes import A4
-from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, Image as RLImage
+from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.lib import colors
 
@@ -217,8 +217,6 @@ def analyze_damage_with_ai(image_file, item_name):
 # Sidebar Inputs
 st.sidebar.header("📋 Report Details")
 
-company_logo_file = st.sidebar.file_uploader("Override Company Logo (Optional)", type=["png", "jpg", "jpeg"])
-
 selected_hospital = st.sidebar.selectbox("Customer / Hospital", options=SL_HOSPITALS, index=1)
 
 if selected_hospital == "Other (Type manually)" or selected_hospital.startswith("---"):
@@ -364,7 +362,6 @@ if st.button("📄 Generate Professional PDF Report", type="primary", use_contai
         border_navy = colors.HexColor('#BAC7D5')
         
         # --- PARAGRAPH STYLES ---
-        # Letterhead Name Font Size 15, Bold
         company_name_style = ParagraphStyle('CompName', parent=styles['Heading1'], fontSize=15, leading=17, textColor=navy_primary, fontName='Helvetica-Bold')
         company_sub_style = ParagraphStyle('CompSub', parent=styles['Normal'], fontSize=7.5, leading=10, textColor=colors.HexColor('#475569'), fontName='Helvetica')
         
@@ -378,29 +375,10 @@ if st.button("📄 Generate Professional PDF Report", type="primary", use_contai
         cell_style = ParagraphStyle('TableCell', parent=styles['Normal'], fontSize=8, leading=11, textColor=colors.HexColor('#222222'), fontName='Helvetica')
         cell_center = ParagraphStyle('TableCellCenter', parent=cell_style, alignment=1)
 
-        # --- LOGO & LETTERHEAD HANDLING ---
-        logo_cell = Paragraph("<b>BIOMED INTERNATIONAL (PVT) LTD</b>", company_name_style)
-        
-        target_logo_source = None
-        if company_logo_file is not None:
-            target_logo_source = company_logo_file
-        elif os.path.exists("logo.png"):
-            target_logo_source = "logo.png"
-        elif os.path.exists("logo.jpg"):
-            target_logo_source = "logo.jpg"
-
-        if target_logo_source is not None:
-            temp_logo_path = "temp_company_logo.png"
-            logo_img = Image.open(target_logo_source)
-            logo_img.thumbnail((160, 60), Image.Resampling.LANCZOS)
-            logo_img.save(temp_logo_path, "PNG")
-            logo_cell = RLImage(temp_logo_path, width=120, height=45)
-            temp_files_to_remove.append(temp_logo_path)
-
-        # --- HEADER TABLE ---
+        # --- HEADER TABLE (NO LOGO) ---
         header_table_content = [
             [
-                logo_cell,
+                Paragraph("<b>BIOMED INTERNATIONAL (PVT) LTD</b>", company_name_style),
                 Paragraph("TECHNICAL INSPECTION REPORT", report_title_style)
             ],
             [
@@ -413,8 +391,8 @@ if st.button("📄 Generate Professional PDF Report", type="primary", use_contai
         t_custom_header.setStyle(TableStyle([
             ('BACKGROUND', (0,0), (-1,-1), ice_blue_bg),
             ('VALIGN', (0,0), (-1,-1), 'MIDDLE'),
-            ('TOPPADDING', (0,0), (-1,-1), 6),
-            ('BOTTOMPADDING', (0,0), (-1,-1), 6),
+            ('TOPPADDING', (0,0), (-1,-1), 8),
+            ('BOTTOMPADDING', (0,0), (-1,-1), 8),
             ('LEFTPADDING', (0,0), (-1,-1), 10),
             ('RIGHTPADDING', (0,0), (-1,-1), 10),
             ('BOX', (0,0), (-1,-1), 1, navy_primary),
@@ -529,7 +507,7 @@ if st.button("📄 Generate Professional PDF Report", type="primary", use_contai
             
             canvas.restoreState()
             
-            # 2. Footer Text (Updated to POWERED BY BIOMED INTERNATIONAL)
+            # 2. Footer Text (POWERED BY BIOMED INTERNATIONAL)
             canvas.saveState()
             canvas.setFont('Helvetica-BoldOblique', 8)
             canvas.setFillColor(colors.HexColor('#7F8C8D'))
