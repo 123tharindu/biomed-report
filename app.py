@@ -503,7 +503,7 @@ if st.button("📄 Generate Professional PDF Report", type="primary", use_contai
             
             canvas.translate(A4[0] / 2.0, A4[1] / 2.0)
             canvas.rotate(45)
-            canvas.drawCentredString(0, 0, "BIOMED INTERNATIONAL")
+            canvas.drawCentredString(0, 0, "AESCULAP")
             
             canvas.restoreState()
             
