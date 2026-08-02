@@ -364,7 +364,8 @@ if st.button("📄 Generate Professional PDF Report", type="primary", use_contai
         border_navy = colors.HexColor('#BAC7D5')
         
         # --- PARAGRAPH STYLES ---
-        company_name_style = ParagraphStyle('CompName', parent=styles['Heading1'], fontSize=13, leading=15, textColor=navy_primary, fontName='Helvetica-Bold')
+        # Letterhead Name Font Size 15, Bold
+        company_name_style = ParagraphStyle('CompName', parent=styles['Heading1'], fontSize=15, leading=17, textColor=navy_primary, fontName='Helvetica-Bold')
         company_sub_style = ParagraphStyle('CompSub', parent=styles['Normal'], fontSize=7.5, leading=10, textColor=colors.HexColor('#475569'), fontName='Helvetica')
         
         report_title_style = ParagraphStyle('RepTitle', parent=styles['Normal'], fontSize=11, leading=13, textColor=navy_primary, fontName='Helvetica-Bold', alignment=2)
@@ -377,8 +378,8 @@ if st.button("📄 Generate Professional PDF Report", type="primary", use_contai
         cell_style = ParagraphStyle('TableCell', parent=styles['Normal'], fontSize=8, leading=11, textColor=colors.HexColor('#222222'), fontName='Helvetica')
         cell_center = ParagraphStyle('TableCellCenter', parent=cell_style, alignment=1)
 
-        # --- LOGO HANDLING ---
-        logo_cell = Paragraph("<b>BIOMED INTERNATIONAL</b>", company_name_style)
+        # --- LOGO & LETTERHEAD HANDLING ---
+        logo_cell = Paragraph("<b>BIOMED INTERNATIONAL (PVT) LTD</b>", company_name_style)
         
         target_logo_source = None
         if company_logo_file is not None:
@@ -528,11 +529,11 @@ if st.button("📄 Generate Professional PDF Report", type="primary", use_contai
             
             canvas.restoreState()
             
-            # 2. Footer Text
+            # 2. Footer Text (Updated to POWERED BY BIOMED INTERNATIONAL)
             canvas.saveState()
             canvas.setFont('Helvetica-BoldOblique', 8)
             canvas.setFillColor(colors.HexColor('#7F8C8D'))
-            canvas.drawCentredString(A4[0] / 2.0, 15, "POWERED BY BIOMED INTERNATION")
+            canvas.drawCentredString(A4[0] / 2.0, 15, "POWERED BY BIOMED INTERNATIONAL")
             canvas.restoreState()
 
         doc.build(story, onFirstPage=add_watermark_and_footer, onLaterPages=add_watermark_and_footer)
