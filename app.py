@@ -404,7 +404,7 @@ if st.button("📄 Generate Professional PDF Report", type="primary", use_contai
                 Paragraph("TECHNICAL INSPECTION REPORT", report_title_style)
             ],
             [
-                Paragraph("Laparoscopy Division | No 2A Deal Place Colombo 03, Sri Lanka", company_sub_style),
+                Paragraph("AESCULAP Division | No 2A Deal Place Colombo 03, Sri Lanka", company_sub_style),
                 Paragraph("LAP SCAN & SERVICE DIAGNOSTICS", report_sub_style)
             ]
         ]
