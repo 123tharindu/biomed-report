@@ -6,7 +6,6 @@ import os
 from PIL import Image, ImageOps
 from google import genai
 from reportlab.lib.pagesizes import A4
-# RLImage මෙතනට නිවැරදිව import කර ඇත
 from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, Image as RLImage
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.lib import colors
@@ -174,8 +173,7 @@ def load_catalog(file_path):
         return {}
 
 catalog_dict = load_catalog(EXCEL_FILE)
-# "Type Article No Manually" option එක ලැයිස්තුවට එකතු කර ඇත
-article_options = ["✍️ Type Article No Manually"] + sorted(list(catalog_dict.keys()))
+article_options = sorted(list(catalog_dict.keys()))
 
 def process_and_compress_image(image_file, max_size=(800, 800)):
     img = Image.open(image_file)
@@ -229,7 +227,7 @@ else:
 selected_date = st.sidebar.date_input("Inspection Date", value=datetime.date.today())
 inspection_date_str = selected_date.strftime("%d %B %Y")
 
-# Engineer / Inspector Name manually type කිරීමට සකස් කරන ලදී
+# Engineer / Inspector Name manually type කිරීම
 engineer_name = st.sidebar.text_input("Engineer / Inspector Name", value="", placeholder="Enter Engineer Name...")
 
 report_no = st.sidebar.text_input("Report No.", value="")
@@ -243,7 +241,7 @@ if "instruments_count" not in st.session_state:
 
 def update_instrument_name(index):
     selected_art = st.session_state.get(f"art_{index}")
-    if selected_art and selected_art != "✍️ Type Article No Manually":
+    if selected_art:
         st.session_state[f"name_{index}"] = catalog_dict.get(selected_art, "")
 
 def update_damage_from_suggestion(index):
@@ -264,8 +262,6 @@ for i in range(st.session_state.instruments_count):
     st.markdown(f"#### 🔪 Instrument Entry #{i+1}")
     col1, col2 = st.columns([1, 2])
     
-    if f"art_{i}" not in st.session_state:
-        st.session_state[f"art_{i}"] = None
     if f"name_{i}" not in st.session_state:
         st.session_state[f"name_{i}"] = ""
     if f"dam_{i}" not in st.session_state:
@@ -275,20 +271,25 @@ for i in range(st.session_state.instruments_count):
         uploaded_file = st.file_uploader(f"Upload Photo #{i+1}", type=["jpg", "jpeg", "png"], key=f"img_{i}")
         
     with col2:
-        selected_art = st.selectbox(
-            f"Search & Select Article Number #{i+1}", 
-            options=article_options, 
-            index=None,
-            placeholder="🔍 Type or Select Article No...",
-            key=f"art_{i}", 
-            on_change=update_instrument_name, 
-            args=(i,)
-        )
+        # Custom type හෝ Select පහසුවෙන්ම කිරීමට Checkbox toggle එකක්
+        is_custom_art = st.checkbox("✍️ Type Custom Article No (Not in Master File)", key=f"is_custom_{i}")
         
-        # Article No auto-search නැති විට Manual Enter කිරීමට Option එක
-        if selected_art == "✍️ Type Article No Manually":
-            final_article_no = st.text_input(f"Enter Custom Article Number #{i+1}", key=f"custom_art_{i}", placeholder="Type Article No here...")
+        if is_custom_art:
+            final_article_no = st.text_input(
+                f"Enter Article Number #{i+1}", 
+                key=f"manual_art_{i}", 
+                placeholder="Type Article No manually here..."
+            )
         else:
+            selected_art = st.selectbox(
+                f"Search & Select Article Number #{i+1}", 
+                options=article_options, 
+                index=None,
+                placeholder="🔍 Search Article No from Master File...",
+                key=f"art_{i}", 
+                on_change=update_instrument_name, 
+                args=(i,)
+            )
             final_article_no = selected_art if selected_art else ""
 
         instrument_name = st.text_input(f"Instrument Name #{i+1}", key=f"name_{i}")
@@ -377,7 +378,7 @@ if st.button("📄 Generate Professional PDF Report", type="primary", use_contai
         cell_style = ParagraphStyle('TableCell', parent=styles['Normal'], fontSize=8, leading=11, textColor=colors.HexColor('#222222'), fontName='Helvetica')
         cell_center = ParagraphStyle('TableCellCenter', parent=cell_style, alignment=1)
 
-        # --- HEADER TABLE (NO LOGO) ---
+        # --- HEADER TABLE ---
         header_table_content = [
             [
                 Paragraph("<b>BIOMED INTERNATIONAL (PVT) LTD</b>", company_name_style),
@@ -446,7 +447,6 @@ if st.button("📄 Generate Professional PDF Report", type="primary", use_contai
                 img = img.convert("RGB")
                 img.save(temp_img_path, "JPEG", quality=80)
                 
-                # RLImage හරහා PDF එකට Image එක එකතු කිරීම
                 img_obj = RLImage(temp_img_path, width=60, height=60)
                 temp_files_to_remove.append(temp_img_path)
                 
@@ -497,21 +497,20 @@ if st.button("📄 Generate Professional PDF Report", type="primary", use_contai
         
         story.append(t_sig)
         
-        # --- WATERMARK & FOOTER FUNCTION ---
+        # --- WATERMARK (AESCULAP) & FOOTER FUNCTION ---
         def add_watermark_and_footer(canvas, doc):
             canvas.saveState()
             
-            # 1. Background Watermark (AESCULAP)
+            # Watermark (AESCULAP)
             canvas.setFont('Helvetica-Bold', 60)
             canvas.setFillColor(colors.Color(0.85, 0.85, 0.85, alpha=0.25)) 
-            
             canvas.translate(A4[0] / 2.0, A4[1] / 2.0)
             canvas.rotate(45)
             canvas.drawCentredString(0, 0, "AESCULAP")
             
             canvas.restoreState()
             
-            # 2. Footer Text (POWERED BY BIOMED INTERNATIONAL)
+            # Footer
             canvas.saveState()
             canvas.setFont('Helvetica-BoldOblique', 8)
             canvas.setFillColor(colors.HexColor('#7F8C8D'))
