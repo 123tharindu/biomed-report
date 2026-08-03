@@ -174,7 +174,8 @@ def load_catalog(file_path):
         return {}
 
 catalog_dict = load_catalog(EXCEL_FILE)
-article_options = sorted(list(catalog_dict.keys()))
+# "Type Article No Manually" option එක ලැයිස්තුවට එකතු කර ඇත
+article_options = ["✍️ Type Article No Manually"] + sorted(list(catalog_dict.keys()))
 
 def process_and_compress_image(image_file, max_size=(800, 800)):
     img = Image.open(image_file)
@@ -228,11 +229,8 @@ else:
 selected_date = st.sidebar.date_input("Inspection Date", value=datetime.date.today())
 inspection_date_str = selected_date.strftime("%d %B %Y")
 
-technician_name = st.sidebar.selectbox(
-    "Technician Name", 
-    options=["Dinushan De Zoysa", "Ishan Kelum", "Biomed Technical Team"],
-    index=0
-)
+# Engineer / Inspector Name manually type කිරීමට සකස් කරන ලදී
+engineer_name = st.sidebar.text_input("Engineer / Inspector Name", value="", placeholder="Enter Engineer Name...")
 
 report_no = st.sidebar.text_input("Report No.", value="")
 department = st.sidebar.text_input("Department", value="Theatre / Laparoscopy")
@@ -245,7 +243,7 @@ if "instruments_count" not in st.session_state:
 
 def update_instrument_name(index):
     selected_art = st.session_state.get(f"art_{index}")
-    if selected_art:
+    if selected_art and selected_art != "✍️ Type Article No Manually":
         st.session_state[f"name_{index}"] = catalog_dict.get(selected_art, "")
 
 def update_damage_from_suggestion(index):
@@ -277,19 +275,22 @@ for i in range(st.session_state.instruments_count):
         uploaded_file = st.file_uploader(f"Upload Photo #{i+1}", type=["jpg", "jpeg", "png"], key=f"img_{i}")
         
     with col2:
-        if len(article_options) > 0:
-            article_no = st.selectbox(
-                f"Search & Select Article Number #{i+1}", 
-                options=article_options, 
-                index=None,
-                placeholder="🔍 Type Article No here...",
-                key=f"art_{i}", 
-                on_change=update_instrument_name, 
-                args=(i,)
-            )
+        selected_art = st.selectbox(
+            f"Search & Select Article Number #{i+1}", 
+            options=article_options, 
+            index=None,
+            placeholder="🔍 Type or Select Article No...",
+            key=f"art_{i}", 
+            on_change=update_instrument_name, 
+            args=(i,)
+        )
+        
+        # Article No auto-search නැති විට Manual Enter කිරීමට Option එක
+        if selected_art == "✍️ Type Article No Manually":
+            final_article_no = st.text_input(f"Enter Custom Article Number #{i+1}", key=f"custom_art_{i}", placeholder="Type Article No here...")
         else:
-            article_no = st.text_input(f"Article Number #{i+1}", key=f"art_{i}")
-            
+            final_article_no = selected_art if selected_art else ""
+
         instrument_name = st.text_input(f"Instrument Name #{i+1}", key=f"name_{i}")
 
         if uploaded_file and GEMINI_API_KEY:
@@ -322,7 +323,7 @@ for i in range(st.session_state.instruments_count):
 
     instrument_entries.append({
         "image": uploaded_file,
-        "article_no": article_no if article_no else "",
+        "article_no": final_article_no,
         "instrument_name": instrument_name,
         "damage": damage_details,
         "recommendation": recommendation
@@ -404,10 +405,11 @@ if st.button("📄 Generate Professional PDF Report", type="primary", use_contai
         story.append(Spacer(1, 10))
 
         # --- METADATA HEADER BOX ---
+        display_engineer = engineer_name if engineer_name.strip() else "Biomed Technical Team"
         header_data = [
             [Paragraph("Customer / Hospital:", label_style), Paragraph(hospital_name, value_style), Paragraph("Brand:", label_style), Paragraph("Aesculap", value_style)],
             [Paragraph("Inspection Date:", label_style), Paragraph(inspection_date_str, value_style), Paragraph("System / Set:", label_style), Paragraph("Laparoscopy", value_style)],
-            [Paragraph("Technician Name:", label_style), Paragraph(technician_name, value_style), Paragraph("Scope Serial No:", label_style), Paragraph("N/A", value_style)],
+            [Paragraph("Engineer Name:", label_style), Paragraph(display_engineer, value_style), Paragraph("Scope Serial No:", label_style), Paragraph("N/A", value_style)],
             [Paragraph("Report No:", label_style), Paragraph(report_no if report_no else "N/A", value_style), Paragraph("Camera System:", label_style), Paragraph("N/A", value_style)],
             [Paragraph("Department:", label_style), Paragraph(department, value_style), Paragraph("Light Source:", label_style), Paragraph("N/A", value_style)]
         ]
@@ -444,7 +446,7 @@ if st.button("📄 Generate Professional PDF Report", type="primary", use_contai
                 img = img.convert("RGB")
                 img.save(temp_img_path, "JPEG", quality=80)
                 
-                # මෙතැන RLImage භාවිත වෙනවා
+                # RLImage හරහා PDF එකට Image එක එකතු කිරීම
                 img_obj = RLImage(temp_img_path, width=60, height=60)
                 temp_files_to_remove.append(temp_img_path)
                 
@@ -489,7 +491,7 @@ if st.button("📄 Generate Professional PDF Report", type="primary", use_contai
         # --- SIGNATURE SECTION ---
         sig_label_style = ParagraphStyle('SigLabel', parent=cell_style, fontSize=8.5, leading=12, textColor=navy_primary)
         t_sig = Table([[
-            Paragraph(f"<b>Inspected By ({technician_name}):</b><br/><br/><br/>__________________________________<br/>Signature & Date", sig_label_style),
+            Paragraph(f"<b>Inspected By ({display_engineer}):</b><br/><br/><br/>__________________________________<br/>Signature & Date", sig_label_style),
             Paragraph("<b>Verified By (Hospital Authority):</b><br/><br/><br/>__________________________________<br/>Signature & Stamp", sig_label_style)
         ]], colWidths=[267, 268])
         
@@ -499,9 +501,9 @@ if st.button("📄 Generate Professional PDF Report", type="primary", use_contai
         def add_watermark_and_footer(canvas, doc):
             canvas.saveState()
             
-            # 1. Background Watermark (Transparent Text)
-            canvas.setFont('Helvetica-Bold', 36)
-            canvas.setFillColor(colors.Color(0.85, 0.85, 0.85, alpha=0.3)) 
+            # 1. Background Watermark (AESCULAP)
+            canvas.setFont('Helvetica-Bold', 60)
+            canvas.setFillColor(colors.Color(0.85, 0.85, 0.85, alpha=0.25)) 
             
             canvas.translate(A4[0] / 2.0, A4[1] / 2.0)
             canvas.rotate(45)
