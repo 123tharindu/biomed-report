@@ -227,9 +227,7 @@ else:
 selected_date = st.sidebar.date_input("Inspection Date", value=datetime.date.today())
 inspection_date_str = selected_date.strftime("%d %B %Y")
 
-# Engineer / Inspector Name manually type කිරීම
 engineer_name = st.sidebar.text_input("Engineer / Inspector Name", value="", placeholder="Enter Engineer Name...")
-
 report_no = st.sidebar.text_input("Report No.", value="")
 department = st.sidebar.text_input("Department", value="Theatre / Laparoscopy")
 
@@ -271,7 +269,6 @@ for i in range(st.session_state.instruments_count):
         uploaded_file = st.file_uploader(f"Upload Photo #{i+1}", type=["jpg", "jpeg", "png"], key=f"img_{i}")
         
     with col2:
-        # Custom type හෝ Select පහසුවෙන්ම කිරීමට Checkbox toggle එකක්
         is_custom_art = st.checkbox("✍️ Type Custom Article No (Not in Master File)", key=f"is_custom_{i}")
         
         if is_custom_art:
@@ -443,11 +440,12 @@ if st.button("📄 Generate Professional PDF Report", type="primary", use_contai
             img_obj = Paragraph("No Image", cell_center)
             if item["image"] is not None:
                 temp_img_path = f"temp_inst_{idx}.jpg"
-                img = process_and_compress_image(item["image"], max_size=(500, 500))
+                img = process_and_compress_image(item["image"], max_size=(600, 600))
                 img = img.convert("RGB")
-                img.save(temp_img_path, "JPEG", quality=80)
+                img.save(temp_img_path, "JPEG", quality=85)
                 
-                img_obj = RLImage(temp_img_path, width=60, height=60)
+                # Image Size Table එකට ලොකුවට පෙන්නන්න (100x100) ලෙස Update කළා
+                img_obj = RLImage(temp_img_path, width=100, height=100)
                 temp_files_to_remove.append(temp_img_path)
                 
             rec = item["recommendation"]
@@ -463,13 +461,14 @@ if st.button("📄 Generate Professional PDF Report", type="primary", use_contai
                 Paragraph(rec_html, cell_center)
             ])
         
-        t_main = Table(table_data, colWidths=[20, 70, 80, 135, 135, 95])
+        # Image Column Width (105) වැඩි කළා, Table Layout Adjust කළා
+        t_main = Table(table_data, colWidths=[20, 105, 75, 115, 130, 90])
         t_main.setStyle(TableStyle([
             ('BACKGROUND', (0,0), (-1,0), navy_primary),
             ('VALIGN', (0,0), (-1,-1), 'MIDDLE'),
             ('GRID', (0,0), (-1,-1), 0.5, border_navy),
-            ('TOPPADDING', (0,0), (-1,-1), 5),
-            ('BOTTOMPADDING', (0,0), (-1,-1), 5),
+            ('TOPPADDING', (0,0), (-1,-1), 6),
+            ('BOTTOMPADDING', (0,0), (-1,-1), 6),
             ('LEFTPADDING', (0,0), (-1,-1), 4),
             ('RIGHTPADDING', (0,0), (-1,-1), 4),
         ]))
