@@ -371,7 +371,8 @@ if st.button("📄 Generate Professional PDF Report", type="primary", use_contai
         label_style = ParagraphStyle('LabelNavy', parent=styles['Normal'], fontSize=8.5, leading=11, textColor=navy_primary, fontName='Helvetica-Bold')
         value_style = ParagraphStyle('ValueText', parent=styles['Normal'], fontSize=8.5, leading=11, textColor=colors.HexColor('#1F2937'), fontName='Helvetica')
         
-        th_style = ParagraphStyle('TableHeader', parent=styles['Normal'], fontSize=8.5, leading=11, textColor=colors.white, fontName='Helvetica-Bold', alignment=1)
+        # Table Header Style (fontSize 8.0 & leading 10 so headers fit smoothly without breaking words)
+        th_style = ParagraphStyle('TableHeader', parent=styles['Normal'], fontSize=8.0, leading=10, textColor=colors.white, fontName='Helvetica-Bold', alignment=1)
         cell_style = ParagraphStyle('TableCell', parent=styles['Normal'], fontSize=8, leading=11, textColor=colors.HexColor('#222222'), fontName='Helvetica')
         cell_center = ParagraphStyle('TableCellCenter', parent=cell_style, alignment=1)
 
@@ -444,7 +445,7 @@ if st.button("📄 Generate Professional PDF Report", type="primary", use_contai
                 img = img.convert("RGB")
                 img.save(temp_img_path, "JPEG", quality=85)
                 
-                # Image Size Table එකට ලොකුවට පෙන්නන්න (100x100) ලෙස Update කළා
+                # Image Size Table (100x100)
                 img_obj = RLImage(temp_img_path, width=100, height=100)
                 temp_files_to_remove.append(temp_img_path)
                 
@@ -461,8 +462,8 @@ if st.button("📄 Generate Professional PDF Report", type="primary", use_contai
                 Paragraph(rec_html, cell_center)
             ])
         
-        # Image Column Width (105) වැඩි කළා, Table Layout Adjust කළා
-        t_main = Table(table_data, colWidths=[20, 105, 75, 115, 130, 90])
+        # Recommendation Column width Adjusted to 105 so text fits perfectly on one line
+        t_main = Table(table_data, colWidths=[20, 105, 70, 110, 125, 105])
         t_main.setStyle(TableStyle([
             ('BACKGROUND', (0,0), (-1,0), navy_primary),
             ('VALIGN', (0,0), (-1,-1), 'MIDDLE'),
