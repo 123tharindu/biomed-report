@@ -339,7 +339,7 @@ for i in range(st.session_state.instruments_count):
     st.markdown(f"#### 🔪 Instrument Entry #{i+1}")
     col1, col2 = st.columns([1, 2])
     
-    # Initialize Session State Keys for Persistence (Prevents Data Loss)
+    # Initialize Session State Keys for Persistence
     if f"name_{i}" not in st.session_state:
         st.session_state[f"name_{i}"] = ""
     if f"dam_{i}" not in st.session_state:
@@ -454,6 +454,7 @@ if st.button("📄 Generate Professional PDF Report", type="primary", use_contai
         navy_primary = colors.HexColor('#0D2A4A')
         navy_accent = colors.HexColor('#1E3A8A')
         ice_blue_bg = colors.HexColor('#F0F4F8')
+        light_yellow_bg = colors.HexColor('#FEF9E7')
         border_navy = colors.HexColor('#BAC7D5')
         
         # --- PARAGRAPH STYLES ---
@@ -528,10 +529,12 @@ if st.button("📄 Generate Professional PDF Report", type="primary", use_contai
             Paragraph("PHOTO", th_style), 
             Paragraph("ARTICLE NO", th_style),
             Paragraph("INSTRUMENT NAME", th_style), 
-            Paragraph("DETAILS OF DAMAGE & COMMENTS", th_style), 
+            Paragraph("DETAILS OF DAMAGE", th_style), 
             Paragraph("RECOMMENDATION", th_style)
         ]]
         
+        tech_comments_list = []
+
         for idx, item in enumerate(instrument_entries):
             img_obj = Paragraph("No Image", cell_center)
             if item["image"] is not None:
@@ -548,11 +551,13 @@ if st.button("📄 Generate Professional PDF Report", type="primary", use_contai
             rec_color = "#C0392B" if rec == "Replace" else ("#D35400" if rec in ["Service", "Repair"] else "#27AE60")
             rec_html = f"<b><font color='{rec_color}'>{rec.upper()}</font></b>"
 
-            # Damage details combined with Technical Comment (if provided)
             damage_text_formatted = item["damage"].replace('\n', '<br/>')
+            
+            # Collect Technical Comments for separate box below table
             if item["tech_comment"].strip():
-                damage_text_formatted += f"<br/><br/><b><font color='{navy_accent.hexval()}'>[Technical Comment]:</font></b><br/>{item['tech_comment'].replace('\n', '<br/>')}"
-                
+                art_str = f" ({item['article_no']})" if item['article_no'] else ""
+                tech_comments_list.append(f"<b>Item #{idx+1}{art_str}:</b> {item['tech_comment'].replace('\n', '<br/>')}")
+
             table_data.append([
                 Paragraph(f"<b>{idx + 1}</b>", cell_center),
                 img_obj,
@@ -562,7 +567,7 @@ if st.button("📄 Generate Professional PDF Report", type="primary", use_contai
                 Paragraph(rec_html, cell_center)
             ])
         
-        # Adjusted Column Widths
+        # Table Layout
         t_main = Table(table_data, colWidths=[20, 135, 65, 100, 125, 90])
         t_main.setStyle(TableStyle([
             ('BACKGROUND', (0,0), (-1,0), navy_primary),
@@ -575,10 +580,22 @@ if st.button("📄 Generate Professional PDF Report", type="primary", use_contai
         ]))
         
         story.append(t_main)
-        story.append(Spacer(1, 12))
-        
+        story.append(Spacer(1, 10))
+
+        # --- SPECIAL TECHNICAL COMMENTS BOX (If Any Exists) ---
+        if tech_comments_list:
+            tech_html = f"<b><font color='{navy_accent.hexval()}'>📝 Special Technical Comments & Observations:</font></b><br/>" + "<br/>".join(tech_comments_list)
+            t_tech_comm = Table([[Paragraph(tech_html, ParagraphStyle('TechCommStyle', parent=cell_style, fontSize=8.5, leading=12))]], colWidths=[535])
+            t_tech_comm.setStyle(TableStyle([
+                ('BACKGROUND', (0,0), (-1,-1), light_yellow_bg),
+                ('BOX', (0,0), (-1,-1), 1, colors.HexColor('#D4AC0D')),
+                ('PADDING', (0,0), (-1,-1), 8)
+            ]))
+            story.append(t_tech_comm)
+            story.append(Spacer(1, 10))
+
         # --- GENERAL REMARKS BOX ---
-        remarks_html = f"<b><font color='{navy_primary.hexval()}'>General Remarks & Technical Observations:</font></b><br/>{remarks}"
+        remarks_html = f"<b><font color='{navy_primary.hexval()}'>General Remarks & Inspection Notes:</font></b><br/>{remarks}"
         t_remarks = Table([[Paragraph(remarks_html, ParagraphStyle('RemarksStyle', parent=cell_style, fontSize=8.5, leading=12))]], colWidths=[535])
         t_remarks.setStyle(TableStyle([
             ('BACKGROUND', (0,0), (-1,-1), ice_blue_bg),
