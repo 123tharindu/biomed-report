@@ -323,7 +323,8 @@ def update_instrument_name(index):
 def update_damage_from_suggestion(index):
     selected_sug = st.session_state.get(f"sug_{index}")
     if selected_sug and not selected_sug.startswith("--"):
-        st.session_state[f"dam_{index}"] = selected_sug
+        existing = st.session_state.get(f"dam_{index}", "")
+        st.session_state[f"dam_{index}"] = selected_sug if not existing else f"{existing}\n{selected_sug}"
 
 def add_instrument():
     st.session_state.instruments_count += 1
@@ -338,10 +339,15 @@ for i in range(st.session_state.instruments_count):
     st.markdown(f"#### 🔪 Instrument Entry #{i+1}")
     col1, col2 = st.columns([1, 2])
     
+    # Initialize Session State Keys for Persistence (Prevents Data Loss)
     if f"name_{i}" not in st.session_state:
         st.session_state[f"name_{i}"] = ""
     if f"dam_{i}" not in st.session_state:
         st.session_state[f"dam_{i}"] = ""
+    if f"tech_comm_{i}" not in st.session_state:
+        st.session_state[f"tech_comm_{i}"] = ""
+    if f"show_comm_{i}" not in st.session_state:
+        st.session_state[f"show_comm_{i}"] = False
 
     with col1:
         uploaded_file = st.file_uploader(f"Upload Photo #{i+1}", type=["jpg", "jpeg", "png"], key=f"img_{i}")
@@ -390,7 +396,17 @@ for i in range(st.session_state.instruments_count):
             key=f"dam_{i}", 
             placeholder="Select from detailed suggestions above, use AI, or type manually..."
         )
-        
+
+        # Optional Special Technical Comment Input
+        show_comment = st.checkbox("📝 Add Special Technical Comment / Remarks", key=f"show_comm_{i}")
+        tech_comment = ""
+        if show_comment:
+            tech_comment = st.text_area(
+                f"Special Technical Comment #{i+1}", 
+                key=f"tech_comm_{i}", 
+                placeholder="Type special engineering comments, serial numbers, or notes here..."
+            )
+
         rec_options = ["Replace", "Service", "Repair", "OK"]
         curr_rec = st.session_state.get(f"rec_{i}", "Service")
         rec_idx = rec_options.index(curr_rec) if curr_rec in rec_options else 1
@@ -402,6 +418,7 @@ for i in range(st.session_state.instruments_count):
         "article_no": final_article_no,
         "instrument_name": instrument_name,
         "damage": damage_details,
+        "tech_comment": tech_comment if show_comment else "",
         "recommendation": recommendation
     })
     st.markdown("---")
@@ -511,7 +528,7 @@ if st.button("📄 Generate Professional PDF Report", type="primary", use_contai
             Paragraph("PHOTO", th_style), 
             Paragraph("ARTICLE NO", th_style),
             Paragraph("INSTRUMENT NAME", th_style), 
-            Paragraph("DETAILS OF DAMAGE", th_style), 
+            Paragraph("DETAILS OF DAMAGE & COMMENTS", th_style), 
             Paragraph("RECOMMENDATION", th_style)
         ]]
         
@@ -523,24 +540,29 @@ if st.button("📄 Generate Professional PDF Report", type="primary", use_contai
                 img = img.convert("RGB")
                 img.save(temp_img_path, "JPEG", quality=90)
                 
-                # Image Size Enlarged to 130x130 (Clear & Detailed)
+                # Image Size 130x130
                 img_obj = RLImage(temp_img_path, width=130, height=130)
                 temp_files_to_remove.append(temp_img_path)
                 
             rec = item["recommendation"]
             rec_color = "#C0392B" if rec == "Replace" else ("#D35400" if rec in ["Service", "Repair"] else "#27AE60")
             rec_html = f"<b><font color='{rec_color}'>{rec.upper()}</font></b>"
+
+            # Damage details combined with Technical Comment (if provided)
+            damage_text_formatted = item["damage"].replace('\n', '<br/>')
+            if item["tech_comment"].strip():
+                damage_text_formatted += f"<br/><br/><b><font color='{navy_accent.hexval()}'>[Technical Comment]:</font></b><br/>{item['tech_comment'].replace('\n', '<br/>')}"
                 
             table_data.append([
                 Paragraph(f"<b>{idx + 1}</b>", cell_center),
                 img_obj,
                 Paragraph(f"<b>{item['article_no']}</b>", cell_style),
                 Paragraph(item["instrument_name"], cell_style),
-                Paragraph(item["damage"].replace('\n', '<br/>'), cell_style),
+                Paragraph(damage_text_formatted, cell_style),
                 Paragraph(rec_html, cell_center)
             ])
         
-        # Adjusted Column Widths for Larger Images (Total: 535 pt)
+        # Adjusted Column Widths
         t_main = Table(table_data, colWidths=[20, 135, 65, 100, 125, 90])
         t_main.setStyle(TableStyle([
             ('BACKGROUND', (0,0), (-1,0), navy_primary),
