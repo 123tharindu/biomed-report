@@ -35,17 +35,18 @@ st.subheader("PROFESSIONAL LAP SCAN REPORT GENERATOR (AI-POWERED)")
 
 # Comprehensive & Complete Sri Lankan Hospitals List (Categorized)
 SL_HOSPITALS = [
-    "--- COLOMBO & SUBURBS (GOVT) ---",
+    "--- COLOMBO & SUBURBS (GOVT / SEMI-GOVT) ---",
+    "Sri Jayewardenepura General Hospital (SJGH)",
     "National Hospital of Sri Lanka (NHSL Colombo)",
     "Lady Ridgeway Hospital for Children (LRH)",
     "De Soysa Hospital for Women (Maternity)",
     "Castle Street Hospital for Women",
     "Colombo South Teaching Hospital (Kalubowila)",
     "Colombo North Teaching Hospital (Ragama)",
+    "Homagama Base Hospital / Teaching Hospital",
     "National Institute of Mental Health (Angoda)",
     "National Cancer Institute (Apeksha Hospital Maharagama)",
     "National Dental Hospital (Maharagama)",
-    "Base Hospital Homagama",
     "Base Hospital Avissawella",
     "Base Hospital Mulleriyawa",
     "Base Hospital Horana",
@@ -79,10 +80,12 @@ SL_HOSPITALS = [
     "Base Hospital Radawana",
     "Hemas Hospital (Wattala)",
     "Nawaloka Hospital (Negombo)",
-    "ArOGYA Hospital (Gampaha)",
+    "AROGYA Hospital (Gampaha)",
     "Leela Hospital (Gampaha)",
 
     "--- KALUTARA DISTRICT ---",
+    "Queensbury Hospital (Panadura)",
+    "Kethumathie Maternity Hospital (Panadura)",
     "District General Hospital Kalutara",
     "Base Hospital Panadura",
     "Base Hospital Horana",
@@ -90,8 +93,12 @@ SL_HOSPITALS = [
     "Divisional Hospital Bandaragama",
     "Divisional Hospital Mathugama",
     "Divisional Hospital Beruwala",
+    "Divisional Hospital Ingiriya",
+    "Divisional Hospital Neboda",
+    "Medihelp Hospital (Panadura)",
     "Medihelp Hospital (Horana)",
     "Medihelp Hospital (Beruwala)",
+    "Medihelp Hospital (Kalutara)",
 
     "--- KANDY & CENTRAL PROVINCE ---",
     "National Hospital Kandy",
@@ -104,14 +111,13 @@ SL_HOSPITALS = [
     "Base Hospital Teldeniya",
     "Base Hospital Dambulla",
     "Base Hospital Rikillagaskada",
-    "Base Hospital Rikillagaskada",
-    "Divisional Hospital Karawanella",
     "Asiri Hospital Kandy",
     "Suwasevana Hospital Kandy",
     "Kandy Private Hospital",
     "Seetha Hospital (Gampola)",
 
     "--- GALLE & SOUTHERN PROVINCE ---",
+    "Queensbury Hospital (Galle)",
     "Teaching Hospital Karapitiya (Galle)",
     "Teaching Hospital Mahamodara (Maternity)",
     "District General Hospital Matara",
@@ -194,7 +200,8 @@ SL_HOSPITALS = [
     "Base Hospital Bibile",
     "Base Hospital Wellawaya",
 
-    "--- TRI-FORCES & POLICE HOSPITALS ---",
+    "--- TRI-FORCES & ACADEMIC HOSPITALS ---",
+    "Kotelawala Defence University Hospital (KDU Werahera)",
     "Army Hospital (Colombo Narahenpita)",
     "Army Hospital (Panagoda)",
     "Navy Hospital (Colombo / Welisara)",
@@ -442,7 +449,7 @@ if st.button("📄 Generate Professional PDF Report", type="primary", use_contai
         label_style = ParagraphStyle('LabelNavy', parent=styles['Normal'], fontSize=8.5, leading=11, textColor=navy_primary, fontName='Helvetica-Bold')
         value_style = ParagraphStyle('ValueText', parent=styles['Normal'], fontSize=8.5, leading=11, textColor=colors.HexColor('#1F2937'), fontName='Helvetica')
         
-        # Table Header Style (fontSize 8.0 & leading 10 so headers fit smoothly without breaking words)
+        # Table Header Style
         th_style = ParagraphStyle('TableHeader', parent=styles['Normal'], fontSize=8.0, leading=10, textColor=colors.white, fontName='Helvetica-Bold', alignment=1)
         cell_style = ParagraphStyle('TableCell', parent=styles['Normal'], fontSize=8, leading=11, textColor=colors.HexColor('#222222'), fontName='Helvetica')
         cell_center = ParagraphStyle('TableCellCenter', parent=cell_style, alignment=1)
@@ -512,12 +519,12 @@ if st.button("📄 Generate Professional PDF Report", type="primary", use_contai
             img_obj = Paragraph("No Image", cell_center)
             if item["image"] is not None:
                 temp_img_path = f"temp_inst_{idx}.jpg"
-                img = process_and_compress_image(item["image"], max_size=(600, 600))
+                img = process_and_compress_image(item["image"], max_size=(800, 800))
                 img = img.convert("RGB")
-                img.save(temp_img_path, "JPEG", quality=85)
+                img.save(temp_img_path, "JPEG", quality=90)
                 
-                # Image Size Table (100x100)
-                img_obj = RLImage(temp_img_path, width=100, height=100)
+                # Image Size Enlarged to 130x130 (Clear & Detailed)
+                img_obj = RLImage(temp_img_path, width=130, height=130)
                 temp_files_to_remove.append(temp_img_path)
                 
             rec = item["recommendation"]
@@ -533,8 +540,8 @@ if st.button("📄 Generate Professional PDF Report", type="primary", use_contai
                 Paragraph(rec_html, cell_center)
             ])
         
-        # Recommendation Column width Adjusted to 105 so text fits perfectly on one line
-        t_main = Table(table_data, colWidths=[20, 105, 70, 110, 125, 105])
+        # Adjusted Column Widths for Larger Images (Total: 535 pt)
+        t_main = Table(table_data, colWidths=[20, 135, 65, 100, 125, 90])
         t_main.setStyle(TableStyle([
             ('BACKGROUND', (0,0), (-1,0), navy_primary),
             ('VALIGN', (0,0), (-1,-1), 'MIDDLE'),
