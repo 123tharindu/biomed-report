@@ -272,7 +272,7 @@ def analyze_damage_with_ai(image_file, item_name):
 
         Provide your analysis strictly in two lines:
         Line 1: Detailed technical explanation of the damage (Maximum 25 words). Include defect & clinical risk. If no damage, write "No visible defect/damage observed."
-        Line 2: Single-word Recommendation (Choose strictly one: Replace, Repair, Service, or OK).
+        Line 2: Single-word Recommendation (Choose strictly one: Replace, Repair, Service, Upgrade / New System Required, or OK).
         """
         response = client.models.generate_content(
             model='gemini-2.0-flash',
@@ -284,7 +284,7 @@ def analyze_damage_with_ai(image_file, item_name):
         rec_text = "OK"
         if len(lines) > 1:
             possible_rec = lines[1].replace("Line 2:", "").strip()
-            for r in ["Replace", "Repair", "Service", "OK"]:
+            for r in ["Replace", "Repair", "Service", "Upgrade / New System Required", "OK"]:
                 if r.lower() in possible_rec.lower():
                     rec_text = r
                     break
@@ -407,7 +407,8 @@ for i in range(st.session_state.instruments_count):
                 placeholder="Type special engineering comments, serial numbers, or notes here..."
             )
 
-        rec_options = ["Replace", "Service", "Repair", "OK"]
+        # Updated Recommendation Options List with "Upgrade / New System Required"
+        rec_options = ["Replace", "Service", "Repair", "Upgrade / New System Required", "OK"]
         curr_rec = st.session_state.get(f"rec_{i}", "Service")
         rec_idx = rec_options.index(curr_rec) if curr_rec in rec_options else 1
         
@@ -548,7 +549,17 @@ if st.button("📄 Generate Professional PDF Report", type="primary", use_contai
                 temp_files_to_remove.append(temp_img_path)
                 
             rec = item["recommendation"]
-            rec_color = "#C0392B" if rec == "Replace" else ("#D35400" if rec in ["Service", "Repair"] else "#27AE60")
+            
+            # Highlight Colors for Recommendation Status
+            if rec == "Replace":
+                rec_color = "#C0392B"  # Red
+            elif rec in ["Service", "Repair"]:
+                rec_color = "#D35400"  # Dark Orange
+            elif rec == "Upgrade / New System Required":
+                rec_color = "#E67E22"  # Orange
+            else:
+                rec_color = "#27AE60"  # Green (OK)
+
             rec_html = f"<b><font color='{rec_color}'>{rec.upper()}</font></b>"
 
             damage_text_formatted = item["damage"].replace('\n', '<br/>')
