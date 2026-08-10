@@ -6,7 +6,7 @@ import os
 from PIL import Image, ImageOps
 from google import genai
 from reportlab.lib.pagesizes import A4
-from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, Image as RLImage
+from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, Image as RLImage, KeepTogether
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.lib import colors
 
@@ -407,7 +407,7 @@ for i in range(st.session_state.instruments_count):
                 placeholder="Type special engineering comments, serial numbers, or notes here..."
             )
 
-        # Updated Recommendation Options List with "Upgrade / New System Required"
+        # Recommendation options list with "Upgrade / New System Required"
         rec_options = ["Replace", "Service", "Repair", "Upgrade / New System Required", "OK"]
         curr_rec = st.session_state.get(f"rec_{i}", "Service")
         rec_idx = rec_options.index(curr_rec) if curr_rec in rec_options else 1
@@ -591,7 +591,7 @@ if st.button("📄 Generate Professional PDF Report", type="primary", use_contai
         ]))
         
         story.append(t_main)
-        story.append(Spacer(1, 10))
+        story.append(Spacer(1, 15))
 
         # --- SPECIAL TECHNICAL COMMENTS BOX (If Any Exists) ---
         if tech_comments_list:
@@ -603,27 +603,43 @@ if st.button("📄 Generate Professional PDF Report", type="primary", use_contai
                 ('PADDING', (0,0), (-1,-1), 8)
             ]))
             story.append(t_tech_comm)
-            story.append(Spacer(1, 10))
+            story.append(Spacer(1, 15))
 
-        # --- GENERAL REMARKS BOX ---
-        remarks_html = f"<b><font color='{navy_primary.hexval()}'>General Remarks & Inspection Notes:</font></b><br/>{remarks}"
-        t_remarks = Table([[Paragraph(remarks_html, ParagraphStyle('RemarksStyle', parent=cell_style, fontSize=8.5, leading=12))]], colWidths=[535])
+        # --- GENERAL REMARKS BOX (FIXED TEXT OVERFLOW & PADDING) ---
+        remarks_style = ParagraphStyle(
+            'RemarksStyle', 
+            parent=styles['Normal'], 
+            fontSize=8.5, 
+            leading=12,
+            textColor=colors.HexColor('#222222'),
+            fontName='Helvetica'
+        )
+        
+        remarks_html = f"<b><font color='{navy_primary.hexval()}'>General Remarks & Inspection Notes:</font></b><br/>{remarks.replace('\n', '<br/>')}"
+        
+        t_remarks = Table([[Paragraph(remarks_html, remarks_style)]], colWidths=[535])
         t_remarks.setStyle(TableStyle([
             ('BACKGROUND', (0,0), (-1,-1), ice_blue_bg),
             ('BOX', (0,0), (-1,-1), 1, navy_primary),
-            ('PADDING', (0,0), (-1,-1), 8)
+            ('TOPPADDING', (0,0), (-1,-1), 8),
+            ('BOTTOMPADDING', (0,0), (-1,-1), 10),
+            ('LEFTPADDING', (0,0), (-1,-1), 8),
+            ('RIGHTPADDING', (0,0), (-1,-1), 8),
+            ('VALIGN', (0,0), (-1,-1), 'TOP')
         ]))
         story.append(t_remarks)
-        story.append(Spacer(1, 20))
         
-        # --- SIGNATURE SECTION ---
+        # Spacer for proper separation between Remarks & Signatures
+        story.append(Spacer(1, 35))
+        
+        # --- SIGNATURE SECTION (KEEPTOGETHER FIX) ---
         sig_label_style = ParagraphStyle('SigLabel', parent=cell_style, fontSize=8.5, leading=12, textColor=navy_primary)
         t_sig = Table([[
             Paragraph(f"<b>Inspected By ({display_engineer}):</b><br/><br/><br/>__________________________________<br/>Signature & Date", sig_label_style),
             Paragraph("<b>Verified By (Hospital Authority):</b><br/><br/><br/>__________________________________<br/>Signature & Stamp", sig_label_style)
         ]], colWidths=[267, 268])
         
-        story.append(t_sig)
+        story.append(KeepTogether([t_sig]))
         
         # --- WATERMARK (AESCULAP) & FOOTER FUNCTION ---
         def add_watermark_and_footer(canvas, doc):
