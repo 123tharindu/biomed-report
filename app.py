@@ -26,7 +26,7 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# BMI Logo Direct Link (Or local file path)
+# BMI Logo Direct Link
 LOGO_URL = "https://i.ibb.co/68v81yM/bmi-logo.png"
 
 # --- MODERN CUSTOM CSS STYLING ---
@@ -103,16 +103,15 @@ if GEMINI_API_KEY:
     except Exception as e:
         st.sidebar.warning(f"Gemini API Init Error: {e}")
 
-# --- BRAND HEADER WITH SMALL LOGO ---
-header_col1, header_col2 = st.columns([0.8, 8.2])
+# --- BRAND HEADER WITH LARGER / CLEAR LOGO ---
+header_col1, header_col2 = st.columns([1.2, 8.8])
 
 with header_col1:
-    # Local file 'bmi_logo.png' තිබේ නම් ඒකෙන්, නැතහොත් URL එකෙන් පොඩියට පෙන්වයි
     if os.path.exists("bmi_logo.png"):
-        st.image("bmi_logo.png", width=75)
+        st.image("bmi_logo.png", width=110)
     else:
         try:
-            st.image(LOGO_URL, width=75)
+            st.image(LOGO_URL, width=110)
         except:
             st.write("🏥")
 
@@ -428,18 +427,19 @@ if st.button("📄 Generate & Export Executive PDF Report (A4)", type="primary",
             Paragraph("AESCULAP Division | No 2A Deal Place Colombo 03, Sri Lanka", company_sub_style)
         ]
 
-        # PDF Logo Handle (Small Size - Width 45, Height 22)
+        # PDF Logo Handle (Clear Larger Size - Width 70, Height 35)
         logo_obj = None
         if os.path.exists("bmi_logo.png"):
-            logo_obj = RLImage("bmi_logo.png", width=45, height=22)
+            logo_obj = RLImage("bmi_logo.png", width=70, height=35)
         else:
             try:
                 img_data = requests.get(LOGO_URL, timeout=3).content
                 logo_io = io.BytesIO(img_data)
-                logo_obj = RLImage(logo_io, width=45, height=22)
+                logo_obj = RLImage(logo_io, width=70, height=35)
             except:
                 logo_obj = Paragraph("<b>BMI</b>", company_name_style)
 
+        # Header Table column widths [75, 240, 220] adjusted for larger logo
         header_table_content = [
             [
                 logo_obj,
@@ -451,7 +451,7 @@ if st.button("📄 Generate & Export Executive PDF Report (A4)", type="primary",
             ]
         ]
         
-        t_custom_header = Table(header_table_content, colWidths=[50, 265, 220])
+        t_custom_header = Table(header_table_content, colWidths=[75, 240, 220])
         t_custom_header.setStyle(TableStyle([
             ('BACKGROUND', (0,0), (-1,-1), ice_blue_bg),
             ('VALIGN', (0,0), (-1,-1), 'MIDDLE'),
