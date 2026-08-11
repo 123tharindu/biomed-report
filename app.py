@@ -301,7 +301,7 @@ for i in range(st.session_state.instruments_count):
     st.markdown(f"""
     <div class="instrument-card">
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
-            <span style="font-weight: 700; color: #0D2A4A; font-size: 15px;">🔪 Instrument Entry #{i+1}</span>
+            <span style="font-weight: 700; color: #0D2A4A; font-size: 15px;">🔑 Instrument Entry #{i+1}</span>
             <span style="font-size: 12px; color: #64748B;">Item Reference #{i+1:02d}</span>
         </div>
     """, unsafe_allow_html=True)
@@ -413,7 +413,7 @@ if st.button("📄 Generate & Export Executive PDF Report (A4)", type="primary",
         border_navy = colors.HexColor('#BAC7D5')
         
         # Company Name Style: Optimized Font Size to ensure (PVT) LTD remains on a single line
-        company_name_style = ParagraphStyle('CompName', parent=styles['Heading1'], fontSize=11, leading=13, textColor=navy_primary, fontName='Helvetica-Bold')
+        company_name_style = ParagraphStyle('CompName', parent=styles['Heading1'], fontSize=13, leading=15, textColor=navy_primary, fontName='Helvetica-Bold')
         company_sub_style = ParagraphStyle('CompSub', parent=styles['Normal'], fontSize=7.5, leading=10, textColor=colors.HexColor('#475569'), fontName='Helvetica')
         
         report_title_style = ParagraphStyle('RepTitle', parent=styles['Normal'], fontSize=10.5, leading=12, textColor=navy_primary, fontName='Helvetica-Bold', alignment=2)
