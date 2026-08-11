@@ -25,6 +25,8 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
+LOGO_PATH = "bmi_logo.png"  # Logo file name
+
 # --- MODERN CUSTOM CSS STYLING ---
 st.markdown("""
 <style>
@@ -37,7 +39,7 @@ st.markdown("""
     /* Custom Header Banner */
     .brand-header {
         background: linear-gradient(135deg, #0D2A4A 0%, #1E3A8A 100%);
-        padding: 24px;
+        padding: 20px 24px;
         border-radius: 12px;
         color: white;
         box-shadow: 0 4px 15px rgba(13, 42, 74, 0.15);
@@ -45,7 +47,7 @@ st.markdown("""
     }
     .brand-header h1 {
         color: #FFFFFF !important;
-        font-size: 26px !important;
+        font-size: 24px !important;
         font-weight: 700 !important;
         margin: 0 !important;
         letter-spacing: 0.5px;
@@ -81,18 +83,6 @@ st.markdown("""
         padding-bottom: 8px;
         margin-bottom: 16px;
     }
-    
-    /* Custom Metric Badges */
-    .metric-badge {
-        background-color: #EFF6FF;
-        border: 1px solid #BFDBFE;
-        color: #1E40AF;
-        padding: 6px 14px;
-        border-radius: 20px;
-        font-size: 12px;
-        font-weight: 600;
-        display: inline-block;
-    }
 
     /* Streamlit Primary Button Styling */
     .stButton>button[kind="primary"] {
@@ -123,20 +113,22 @@ if GEMINI_API_KEY:
     except Exception as e:
         st.sidebar.warning(f"Gemini API Init Error: {e}")
 
-# --- BRAND HEADER ---
-st.markdown("""
-<div class="brand-header">
-    <div style="display: flex; justify-content: space-between; align-items: center;">
+# --- BRAND HEADER WITH LOGO ---
+header_col1, header_col2 = st.columns([1, 6])
+
+with header_col1:
+    if os.path.exists(LOGO_PATH):
+        st.image(LOGO_PATH, width=130)
+
+with header_col2:
+    st.markdown("""
+    <div class="brand-header">
         <div>
-            <h1>🏥 BIOMED INTERNATIONAL (PVT) LTD</h1>
+            <h1>BIOMED INTERNATIONAL (PVT) LTD</h1>
             <p>AESCULAP DIVISION — TECHNICAL INSPECTION & SCAN REPORT PORTAL</p>
         </div>
-        <div>
-            <span class="metric-badge">System Status: Active</span>
-        </div>
     </div>
-</div>
-""", unsafe_allow_html=True)
+    """, unsafe_allow_html=True)
 
 # Hospitals List & Damage Suggestions
 SL_HOSPITALS = [
@@ -557,7 +549,7 @@ if st.button("📄 Generate & Export Executive PDF Report (A4)", type="primary",
         border_navy = colors.HexColor('#BAC7D5')
         
         # Styles
-        company_name_style = ParagraphStyle('CompName', parent=styles['Heading1'], fontSize=15, leading=17, textColor=navy_primary, fontName='Helvetica-Bold')
+        company_name_style = ParagraphStyle('CompName', parent=styles['Heading1'], fontSize=14, leading=16, textColor=navy_primary, fontName='Helvetica-Bold')
         company_sub_style = ParagraphStyle('CompSub', parent=styles['Normal'], fontSize=7.5, leading=10, textColor=colors.HexColor('#475569'), fontName='Helvetica')
         
         report_title_style = ParagraphStyle('RepTitle', parent=styles['Normal'], fontSize=11, leading=13, textColor=navy_primary, fontName='Helvetica-Bold', alignment=2)
@@ -570,19 +562,38 @@ if st.button("📄 Generate & Export Executive PDF Report (A4)", type="primary",
         cell_style = ParagraphStyle('TableCell', parent=styles['Normal'], fontSize=8, leading=11, textColor=colors.HexColor('#222222'), fontName='Helvetica')
         cell_center = ParagraphStyle('TableCellCenter', parent=cell_style, alignment=1)
 
-        # Header Table
-        header_table_content = [
-            [
-                Paragraph("<b>BIOMED INTERNATIONAL (PVT) LTD</b>", company_name_style),
-                Paragraph("TECHNICAL INSPECTION REPORT", report_title_style)
-            ],
-            [
-                Paragraph("AESCULAP Division | No 2A Deal Place Colombo 03, Sri Lanka", company_sub_style),
-                Paragraph("LAP SCAN & SERVICE DIAGNOSTICS", report_sub_style)
-            ]
+        # PDF Header Table with Logo
+        company_info_block = [
+            Paragraph("<b>BIOMED INTERNATIONAL (PVT) LTD</b>", company_name_style),
+            Paragraph("AESCULAP Division | No 2A Deal Place Colombo 03, Sri Lanka", company_sub_style)
         ]
-        
-        t_custom_header = Table(header_table_content, colWidths=[315, 220])
+
+        if os.path.exists(LOGO_PATH):
+            logo_obj = RLImage(LOGO_PATH, width=65, height=35)
+            header_table_content = [
+                [
+                    logo_obj,
+                    company_info_block,
+                    [
+                        Paragraph("TECHNICAL INSPECTION REPORT", report_title_style),
+                        Paragraph("LAP SCAN & SERVICE DIAGNOSTICS", report_sub_style)
+                    ]
+                ]
+            ]
+            t_custom_header = Table(header_table_content, colWidths=[70, 245, 220])
+        else:
+            header_table_content = [
+                [
+                    Paragraph("<b>BIOMED INTERNATIONAL (PVT) LTD</b>", company_name_style),
+                    Paragraph("TECHNICAL INSPECTION REPORT", report_title_style)
+                ],
+                [
+                    Paragraph("AESCULAP Division | No 2A Deal Place Colombo 03, Sri Lanka", company_sub_style),
+                    Paragraph("LAP SCAN & SERVICE DIAGNOSTICS", report_sub_style)
+                ]
+            ]
+            t_custom_header = Table(header_table_content, colWidths=[315, 220])
+
         t_custom_header.setStyle(TableStyle([
             ('BACKGROUND', (0,0), (-1,-1), ice_blue_bg),
             ('VALIGN', (0,0), (-1,-1), 'MIDDLE'),
@@ -591,7 +602,7 @@ if st.button("📄 Generate & Export Executive PDF Report (A4)", type="primary",
             ('LEFTPADDING', (0,0), (-1,-1), 10),
             ('RIGHTPADDING', (0,0), (-1,-1), 10),
             ('BOX', (0,0), (-1,-1), 1, navy_primary),
-            ('LINEBELOW', (0,1), (-1,1), 1.5, navy_primary)
+            ('LINEBELOW', (0,-1), (-1,-1), 1.5, navy_primary)
         ]))
         
         story.append(t_custom_header)
