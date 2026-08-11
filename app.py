@@ -200,12 +200,15 @@ EXCEL_FILE = "Full Laparoscopy Articles Updated master file 07.07.2026.xlsx"
 @st.cache_data
 def load_catalog(file_path):
     try:
-        df = pd.read_excel(file_path, sheet_name='Master File')
-        df.columns = ['Article', 'Description']
-        df = df.dropna(subset=['Article', 'Description'])
-        df['Article'] = df['Article'].astype(str).str.strip()
-        df['Description'] = df['Description'].astype(str).str.strip()
-        return dict(zip(df['Article'], df['Description']))
+        df = pd.read_excel(file_path)
+        df.columns = [str(col).strip() for col in df.columns]
+        art_col = df.columns[0]
+        desc_col = df.columns[1] if len(df.columns) > 1 else df.columns[0]
+        
+        df = df.dropna(subset=[art_col])
+        df[art_col] = df[art_col].astype(str).str.strip()
+        df[desc_col] = df[desc_col].astype(str).str.strip()
+        return dict(zip(df[art_col], df[desc_col]))
     except Exception:
         return {}
 
@@ -409,7 +412,8 @@ if st.button("📄 Generate & Export Executive PDF Report (A4)", type="primary",
         light_yellow_bg = colors.HexColor('#FEF9E7')
         border_navy = colors.HexColor('#BAC7D5')
         
-        company_name_style = ParagraphStyle('CompName', parent=styles['Heading1'], fontSize=13, leading=15, textColor=navy_primary, fontName='Helvetica-Bold')
+        # Company Name Style: Optimized Font Size to ensure (PVT) LTD remains on a single line
+        company_name_style = ParagraphStyle('CompName', parent=styles['Heading1'], fontSize=11, leading=13, textColor=navy_primary, fontName='Helvetica-Bold')
         company_sub_style = ParagraphStyle('CompSub', parent=styles['Normal'], fontSize=7.5, leading=10, textColor=colors.HexColor('#475569'), fontName='Helvetica')
         
         report_title_style = ParagraphStyle('RepTitle', parent=styles['Normal'], fontSize=10.5, leading=12, textColor=navy_primary, fontName='Helvetica-Bold', alignment=2)
@@ -423,23 +427,23 @@ if st.button("📄 Generate & Export Executive PDF Report (A4)", type="primary",
         cell_center = ParagraphStyle('TableCellCenter', parent=cell_style, alignment=1)
 
         company_info_block = [
-            Paragraph("<b>BIOMED INTERNATIONAL (PVT) LTD</b>", company_name_style),
+            Paragraph("BIOMED INTERNATIONAL (PVT) LTD", company_name_style),
             Paragraph("AESCULAP Division | No 2A Deal Place Colombo 03, Sri Lanka", company_sub_style)
         ]
 
-        # PDF Logo Handle (Clear Larger Size - Width 70, Height 35)
+        # PDF Logo Handle
         logo_obj = None
         if os.path.exists("bmi_logo.png"):
-            logo_obj = RLImage("bmi_logo.png", width=70, height=35)
+            logo_obj = RLImage("bmi_logo.png", width=65, height=32)
         else:
             try:
                 img_data = requests.get(LOGO_URL, timeout=3).content
                 logo_io = io.BytesIO(img_data)
-                logo_obj = RLImage(logo_io, width=70, height=35)
+                logo_obj = RLImage(logo_io, width=65, height=32)
             except:
                 logo_obj = Paragraph("<b>BMI</b>", company_name_style)
 
-        # Header Table column widths [75, 240, 220] adjusted for larger logo
+        # Header Table column widths [70, 260, 205] adjusted for better single-line display
         header_table_content = [
             [
                 logo_obj,
@@ -451,7 +455,7 @@ if st.button("📄 Generate & Export Executive PDF Report (A4)", type="primary",
             ]
         ]
         
-        t_custom_header = Table(header_table_content, colWidths=[75, 240, 220])
+        t_custom_header = Table(header_table_content, colWidths=[70, 260, 205])
         t_custom_header.setStyle(TableStyle([
             ('BACKGROUND', (0,0), (-1,-1), ice_blue_bg),
             ('VALIGN', (0,0), (-1,-1), 'MIDDLE'),
