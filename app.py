@@ -109,10 +109,10 @@ header_col1, header_col2 = st.columns([0.8, 8.2])
 with header_col1:
     # Local file 'bmi_logo.png' තිබේ නම් ඒකෙන්, නැතහොත් URL එකෙන් පොඩියට පෙන්වයි
     if os.path.exists("bmi_logo.png"):
-        st.image("bmi_logo.png", width=65)
+        st.image("bmi_logo.png", width=75)
     else:
         try:
-            st.image(LOGO_URL, width=65)
+            st.image(LOGO_URL, width=75)
         except:
             st.write("🏥")
 
