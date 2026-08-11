@@ -3,6 +3,7 @@ import pandas as pd
 import datetime
 import io
 import os
+import requests
 from PIL import Image, ImageOps
 from google import genai
 from reportlab.lib.pagesizes import A4
@@ -25,41 +26,39 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-LOGO_PATH = "bmi_logo.png"  # Logo file name
+# BMI Logo Direct Link (Or local file path)
+LOGO_URL = "https://i.ibb.co/68v81yM/bmi-logo.png"
 
 # --- MODERN CUSTOM CSS STYLING ---
 st.markdown("""
 <style>
-    /* Main Background & Font Settings */
     .main {
         background-color: #F8FAFC;
         font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
     }
     
-    /* Custom Header Banner */
     .brand-header {
         background: linear-gradient(135deg, #0D2A4A 0%, #1E3A8A 100%);
-        padding: 20px 24px;
-        border-radius: 12px;
+        padding: 16px 20px;
+        border-radius: 10px;
         color: white;
         box-shadow: 0 4px 15px rgba(13, 42, 74, 0.15);
-        margin-bottom: 25px;
+        margin-bottom: 20px;
     }
     .brand-header h1 {
         color: #FFFFFF !important;
-        font-size: 24px !important;
+        font-size: 22px !important;
         font-weight: 700 !important;
         margin: 0 !important;
         letter-spacing: 0.5px;
     }
     .brand-header p {
         color: #93C5FD !important;
-        font-size: 13px !important;
-        margin-top: 4px !important;
+        font-size: 12px !important;
+        margin-top: 3px !important;
         font-weight: 500;
     }
 
-    /* Instrument Card Section */
     .instrument-card {
         background-color: #FFFFFF;
         border: 1px solid #E2E8F0;
@@ -67,14 +66,8 @@ st.markdown("""
         padding: 20px;
         margin-bottom: 20px;
         box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
-        transition: all 0.2s ease-in-out;
-    }
-    .instrument-card:hover {
-        border-color: #CBD5E1;
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
     }
     
-    /* Section Headings */
     .section-title {
         font-size: 16px;
         font-weight: 700;
@@ -84,7 +77,6 @@ st.markdown("""
         margin-bottom: 16px;
     }
 
-    /* Streamlit Primary Button Styling */
     .stButton>button[kind="primary"] {
         background: linear-gradient(135deg, #0D2A4A 0%, #1E3A8A 100%) !important;
         color: white !important;
@@ -92,10 +84,8 @@ st.markdown("""
         border-radius: 8px !important;
         padding: 12px 24px !important;
         font-weight: 600 !important;
-        box-shadow: 0 4px 10px rgba(13, 42, 74, 0.2) !important;
     }
     
-    /* Sidebar Styling */
     [data-testid="stSidebar"] {
         background-color: #FFFFFF;
         border-right: 1px solid #E2E8F0;
@@ -113,12 +103,18 @@ if GEMINI_API_KEY:
     except Exception as e:
         st.sidebar.warning(f"Gemini API Init Error: {e}")
 
-# --- BRAND HEADER WITH LOGO ---
-header_col1, header_col2 = st.columns([1, 6])
+# --- BRAND HEADER WITH SMALL LOGO ---
+header_col1, header_col2 = st.columns([0.8, 8.2])
 
 with header_col1:
-    if os.path.exists(LOGO_PATH):
-        st.image(LOGO_PATH, width=130)
+    # Local file 'bmi_logo.png' තිබේ නම් ඒකෙන්, නැතහොත් URL එකෙන් පොඩියට පෙන්වයි
+    if os.path.exists("bmi_logo.png"):
+        st.image("bmi_logo.png", width=65)
+    else:
+        try:
+            st.image(LOGO_URL, width=65)
+        except:
+            st.write("🏥")
 
 with header_col2:
     st.markdown("""
@@ -130,7 +126,7 @@ with header_col2:
     </div>
     """, unsafe_allow_html=True)
 
-# Hospitals List & Damage Suggestions
+# Hospitals List
 SL_HOSPITALS = [
     "--- COLOMBO & SUBURBS (GOVT / SEMI-GOVT) ---",
     "Sri Jayewardenepura General Hospital (SJGH)",
@@ -148,8 +144,6 @@ SL_HOSPITALS = [
     "Base Hospital Mulleriyawa",
     "Base Hospital Horana",
     "Base Hospital Piliyandala",
-    "Divisional Hospital Padukka",
-    "Divisional Hospital Hanwella",
     
     "--- COLOMBO & SUBURBS (PRIVATE) ---",
     "Asiri Central Hospital (Colombo 10)",
@@ -160,150 +154,28 @@ SL_HOSPITALS = [
     "Durdans Hospital (Colombo 03)",
     "Kings Hospital (Colombo 05)",
     "Ninewells Hospital (Narahenpita)",
-    "Park Hospital (Colombo 05)",
     "Hemas Hospital (Thalawathugoda)",
-    "Pannipitiya Nursing Home",
-    "Dr. Neville Fernando Teaching Hospital (Malabe)",
-    "Western Hospital (Colombo 08)",
-    "Melsta Hospital (Ragama)",
 
     "--- GAMPAHA DISTRICT ---",
     "District General Hospital Gampaha",
     "District General Hospital Negombo",
     "Base Hospital Wathupitiwala",
-    "Base Hospital Kiribathgoda",
-    "Base Hospital Mirigama",
-    "Base Hospital Minuwangoda",
-    "Base Hospital Radawana",
     "Hemas Hospital (Wattala)",
-    "Nawaloka Hospital (Negombo)",
-    "AROGYA Hospital (Gampaha)",
-    "Leela Hospital (Gampaha)",
-
-    "--- KALUTARA DISTRICT ---",
-    "Queensbury Hospital (Panadura)",
-    "Kethumathie Maternity Hospital (Panadura)",
-    "District General Hospital Kalutara",
-    "Base Hospital Panadura",
-    "Base Hospital Horana",
-    "Base Hospital Pimbura (Agalawatta)",
-    "Divisional Hospital Bandaragama",
-    "Divisional Hospital Mathugama",
-    "Divisional Hospital Beruwala",
-    "Divisional Hospital Ingiriya",
-    "Divisional Hospital Neboda",
-    "Medihelp Hospital (Panadura)",
-    "Medihelp Hospital (Horana)",
-    "Medihelp Hospital (Beruwala)",
-    "Medihelp Hospital (Kalutara)",
 
     "--- KANDY & CENTRAL PROVINCE ---",
     "National Hospital Kandy",
     "Teaching Hospital Peradeniya",
-    "Sirimavo Bandaranaike Specialized Children's Hospital (Peradeniya)",
     "District General Hospital Nuwara Eliya",
     "District General Hospital Matale",
-    "Base Hospital Gampola",
-    "Base Hospital Nawalapitiya",
-    "Base Hospital Teldeniya",
-    "Base Hospital Dambulla",
-    "Base Hospital Rikillagaskada",
-    "Asiri Hospital Kandy",
-    "Suwasevana Hospital Kandy",
-    "Kandy Private Hospital",
-    "Seetha Hospital (Gampola)",
 
     "--- GALLE & SOUTHERN PROVINCE ---",
-    "Queensbury Hospital (Galle)",
     "Teaching Hospital Karapitiya (Galle)",
-    "Teaching Hospital Mahamodara (Maternity)",
     "District General Hospital Matara",
     "District General Hospital Hambantota",
-    "Base Hospital Tangalle",
-    "Base Hospital Balapitiya",
-    "Base Hospital Elpitiya",
-    "Base Hospital Udugama",
-    "Base Hospital Deniyaya",
-    "Base Hospital Kamburupitiya",
-    "Base Hospital Walasmulla",
-    "Ruhunu Hospital (Galle)",
-    "Asiri Hospital Matara",
-    "Co-operative Hospital Matara",
-    "Mohotti Private Hospital (Matara)",
 
     "--- NORTH WESTERN (KURUNEGALA & CHILAW) ---",
     "Teaching Hospital Kurunegala",
     "District General Hospital Chilaw",
-    "Base Hospital Kuliyapitiya",
-    "Base Hospital Dambadeniya",
-    "Base Hospital Marawila",
-    "Base Hospital Nikaweratiya",
-    "Base Hospital Giriulla",
-    "Base Hospital Maho",
-    "Co-operative Hospital Kurunegala",
-    "Central Hospital Kurunegala",
-    "Setmill Hospital (Kurunegala)",
-
-    "--- NORTHERN PROVINCE ---",
-    "Teaching Hospital Jaffna",
-    "District General Hospital Vavuniya",
-    "District General Hospital Mannar",
-    "District General Hospital Kilinochchi",
-    "District General Hospital Mullaaitivu",
-    "Base Hospital Point Pedro",
-    "Base Hospital Tellippalai",
-    "Base Hospital Kayts",
-    "Base Hospital Chavakachcheri",
-    "Northern Central Hospital (Jaffna)",
-    "Yarl Hospital (Jaffna)",
-
-    "--- EASTERN PROVINCE ---",
-    "Teaching Hospital Batticaloa",
-    "District General Hospital Trincomalee",
-    "District General Hospital Ampara",
-    "Base Hospital Kalmunai (North & South)",
-    "Base Hospital Kantale",
-    "Base Hospital Muthur",
-    "Base Hospital Mahaoya",
-    "Base Hospital Pottuvil",
-    "Base Hospital Valachchenai",
-
-    "--- NORTH CENTRAL PROVINCE ---",
-    "Teaching Hospital Anuradhapura",
-    "District General Hospital Polonnaruwa",
-    "Base Hospital Thambuttegama",
-    "Base Hospital Kebithigollewa",
-    "Base Hospital Padaviya",
-    "Base Hospital Medirigiriya",
-    "Base Hospital Hingurakgoda",
-
-    "--- SABARAGAMUWA PROVINCE ---",
-    "Teaching Hospital Ratnapura",
-    "District General Hospital Kegalle",
-    "Base Hospital Karawanella",
-    "Base Hospital Mawanella",
-    "Base Hospital Balangoda",
-    "Base Hospital Kahawatta",
-    "Base Hospital Embilipitiya",
-    "Divisional Hospital Warakapola",
-
-    "--- UVA PROVINCE ---",
-    "Provincial General Hospital Badulla",
-    "District General Hospital Monaragala",
-    "Base Hospital Bandarawela",
-    "Base Hospital Diyatalawa",
-    "Base Hospital Mahiyanganaya",
-    "Base Hospital Welimada",
-    "Base Hospital Bibile",
-    "Base Hospital Wellawaya",
-
-    "--- TRI-FORCES & ACADEMIC HOSPITALS ---",
-    "Kotelawala Defence University Hospital (KDU Werahera)",
-    "Army Hospital (Colombo Narahenpita)",
-    "Army Hospital (Panagoda)",
-    "Navy Hospital (Colombo / Welisara)",
-    "Air Force Hospital (Katunayake)",
-    "Police Hospital (Narahenpita)",
 
     "--- OTHER / CUSTOM ---",
     "Other (Type manually)"
@@ -319,14 +191,7 @@ DAMAGE_SUGGESTIONS = [
     "Jaw Joint Play: Excessive mechanical play and looseness at the distal joint pin. Causes uneven jaw closing force and unstable grip.",
     "Bipolar/Monopolar Tip Wear: Coagulation tips show severe thermal pitting, carbon deposits, and eroded conductive surfaces.",
     "Ratchet Lock Failure: Lock mechanism/ratchet teeth are severely worn out. Handle fails to hold locking position under tension, slipping during use.",
-    "Spring & Tension Issue: Internal handle spring mechanism is broken or lost tension. Handle fails to return to neutral open position automatically.",
-    "Handle Joint Wear: Connecting linkages between handle and inner rod show excessive wear, reducing force transmission to the jaws.",
-    "Distal Lens Damage: Objective lens at the distal tip is scratched/cracked. Causes blurriness, distortion, and optical artifacts in the surgical field.",
-    "Internal Moisture / Fogging: Internal optical sealing compromised. Severe internal fogging and moisture droplets observed inside optical tube when heated.",
-    "Fiber Optic Bundle Damage: Multiple fiber optic light fibers broken inside scope tube. Optical image shows dark spots and reduced overall light brightness.",
-    "Light Cable Fiber Breakage: High percentage of internal glass fiber bundles broken (>30%). Results in poor illumination and dark surgical view.",
-    "Cable Connector Discoloration: Stainless steel light post connectors burnt and discolored from excessive heat; degraded light entry coupling.",
-    "Corrosion & Pitting: Severe pitting corrosion, rust stains, and surface oxidation observed near joints and laser markings due to improper chemical sterilization.",
+    "Corrosion & Pitting: Severe pitting corrosion, rust stains, and surface oxidation observed near joints due to improper chemical sterilization.",
     "General Overhaul Required: Cumulative mechanical wear and friction across all moving components. Full servicing, alignment, and seal replacement needed.",
     "Pass Inspection: Instrument in optimal condition. No physical defect, electrical leak, or optical distortion observed during inspection."
 ]
@@ -359,13 +224,12 @@ def analyze_damage_with_ai(image_file, item_name):
         return "API Key not configured properly.", "OK"
     try:
         compressed_img = process_and_compress_image(image_file, max_size=(800, 800))
-        
         prompt = f"""
         You are an expert Biomedical Engineer inspecting a surgical instrument named '{item_name}'.
         Examine the provided image carefully and identify physical damage, cracks, dents, insulation damage, or wear and tear.
 
         Provide your analysis strictly in two lines:
-        Line 1: Detailed technical explanation of the damage (Maximum 25 words). Include defect & clinical risk. If no damage, write "No visible defect/damage observed."
+        Line 1: Detailed technical explanation of the damage (Maximum 25 words).
         Line 2: Single-word Recommendation (Choose strictly one: Replace, Repair, Service, Upgrade / New System Required, or OK).
         """
         response = client.models.generate_content(
@@ -504,7 +368,7 @@ for i in range(st.session_state.instruments_count):
         
         recommendation = st.selectbox(f"Engineering Recommendation #{i+1}", options=rec_options, index=rec_idx, key=f"rec_{i}")
 
-    st.markdown("</div>", unsafe_allow_html=True) # End Card Div
+    st.markdown("</div>", unsafe_allow_html=True)
 
     instrument_entries.append({
         "image": uploaded_file,
@@ -515,7 +379,6 @@ for i in range(st.session_state.instruments_count):
         "recommendation": recommendation
     })
 
-# Dashboard Controls
 col_add, col_remove, _ = st.columns([2, 2, 4])
 with col_add:
     st.button("➕ Add Instrument", on_click=add_instrument, use_container_width=True)
@@ -541,19 +404,17 @@ if st.button("📄 Generate & Export Executive PDF Report (A4)", type="primary",
         styles = getSampleStyleSheet()
         temp_files_to_remove = []
         
-        # Color Palette
         navy_primary = colors.HexColor('#0D2A4A')
         navy_accent = colors.HexColor('#1E3A8A')
         ice_blue_bg = colors.HexColor('#F0F4F8')
         light_yellow_bg = colors.HexColor('#FEF9E7')
         border_navy = colors.HexColor('#BAC7D5')
         
-        # Styles
-        company_name_style = ParagraphStyle('CompName', parent=styles['Heading1'], fontSize=14, leading=16, textColor=navy_primary, fontName='Helvetica-Bold')
+        company_name_style = ParagraphStyle('CompName', parent=styles['Heading1'], fontSize=13, leading=15, textColor=navy_primary, fontName='Helvetica-Bold')
         company_sub_style = ParagraphStyle('CompSub', parent=styles['Normal'], fontSize=7.5, leading=10, textColor=colors.HexColor('#475569'), fontName='Helvetica')
         
-        report_title_style = ParagraphStyle('RepTitle', parent=styles['Normal'], fontSize=11, leading=13, textColor=navy_primary, fontName='Helvetica-Bold', alignment=2)
-        report_sub_style = ParagraphStyle('RepSub', parent=styles['Normal'], fontSize=8, leading=10, textColor=navy_accent, fontName='Helvetica-Bold', alignment=2)
+        report_title_style = ParagraphStyle('RepTitle', parent=styles['Normal'], fontSize=10.5, leading=12, textColor=navy_primary, fontName='Helvetica-Bold', alignment=2)
+        report_sub_style = ParagraphStyle('RepSub', parent=styles['Normal'], fontSize=7.5, leading=9, textColor=navy_accent, fontName='Helvetica-Bold', alignment=2)
 
         label_style = ParagraphStyle('LabelNavy', parent=styles['Normal'], fontSize=8.5, leading=11, textColor=navy_primary, fontName='Helvetica-Bold')
         value_style = ParagraphStyle('ValueText', parent=styles['Normal'], fontSize=8.5, leading=11, textColor=colors.HexColor('#1F2937'), fontName='Helvetica')
@@ -562,45 +423,42 @@ if st.button("📄 Generate & Export Executive PDF Report (A4)", type="primary",
         cell_style = ParagraphStyle('TableCell', parent=styles['Normal'], fontSize=8, leading=11, textColor=colors.HexColor('#222222'), fontName='Helvetica')
         cell_center = ParagraphStyle('TableCellCenter', parent=cell_style, alignment=1)
 
-        # PDF Header Table with Logo
         company_info_block = [
             Paragraph("<b>BIOMED INTERNATIONAL (PVT) LTD</b>", company_name_style),
             Paragraph("AESCULAP Division | No 2A Deal Place Colombo 03, Sri Lanka", company_sub_style)
         ]
 
-        if os.path.exists(LOGO_PATH):
-            logo_obj = RLImage(LOGO_PATH, width=65, height=35)
-            header_table_content = [
-                [
-                    logo_obj,
-                    company_info_block,
-                    [
-                        Paragraph("TECHNICAL INSPECTION REPORT", report_title_style),
-                        Paragraph("LAP SCAN & SERVICE DIAGNOSTICS", report_sub_style)
-                    ]
-                ]
-            ]
-            t_custom_header = Table(header_table_content, colWidths=[70, 245, 220])
+        # PDF Logo Handle (Small Size - Width 45, Height 22)
+        logo_obj = None
+        if os.path.exists("bmi_logo.png"):
+            logo_obj = RLImage("bmi_logo.png", width=45, height=22)
         else:
-            header_table_content = [
+            try:
+                img_data = requests.get(LOGO_URL, timeout=3).content
+                logo_io = io.BytesIO(img_data)
+                logo_obj = RLImage(logo_io, width=45, height=22)
+            except:
+                logo_obj = Paragraph("<b>BMI</b>", company_name_style)
+
+        header_table_content = [
+            [
+                logo_obj,
+                company_info_block,
                 [
-                    Paragraph("<b>BIOMED INTERNATIONAL (PVT) LTD</b>", company_name_style),
-                    Paragraph("TECHNICAL INSPECTION REPORT", report_title_style)
-                ],
-                [
-                    Paragraph("AESCULAP Division | No 2A Deal Place Colombo 03, Sri Lanka", company_sub_style),
+                    Paragraph("TECHNICAL INSPECTION REPORT", report_title_style),
                     Paragraph("LAP SCAN & SERVICE DIAGNOSTICS", report_sub_style)
                 ]
             ]
-            t_custom_header = Table(header_table_content, colWidths=[315, 220])
-
+        ]
+        
+        t_custom_header = Table(header_table_content, colWidths=[50, 265, 220])
         t_custom_header.setStyle(TableStyle([
             ('BACKGROUND', (0,0), (-1,-1), ice_blue_bg),
             ('VALIGN', (0,0), (-1,-1), 'MIDDLE'),
-            ('TOPPADDING', (0,0), (-1,-1), 8),
-            ('BOTTOMPADDING', (0,0), (-1,-1), 8),
-            ('LEFTPADDING', (0,0), (-1,-1), 10),
-            ('RIGHTPADDING', (0,0), (-1,-1), 10),
+            ('TOPPADDING', (0,0), (-1,-1), 6),
+            ('BOTTOMPADDING', (0,0), (-1,-1), 6),
+            ('LEFTPADDING', (0,0), (-1,-1), 8),
+            ('RIGHTPADDING', (0,0), (-1,-1), 8),
             ('BOX', (0,0), (-1,-1), 1, navy_primary),
             ('LINEBELOW', (0,-1), (-1,-1), 1.5, navy_primary)
         ]))
