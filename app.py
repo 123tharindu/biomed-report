@@ -17,8 +17,101 @@ try:
 except ImportError:
     PDF2IMAGE_AVAILABLE = False
 
-# Page Config
-st.set_page_config(page_title="Biomed International - AI Report Generator", page_icon="🏥", layout="wide")
+# --- PAGE CONFIGURATION ---
+st.set_page_config(
+    page_title="Biomed International - AI Lap Scan Portal",
+    page_icon="🏥",
+    layout="wide",
+    initial_sidebar_state="expanded"
+)
+
+# --- MODERN CUSTOM CSS STYLING ---
+st.markdown("""
+<style>
+    /* Main Background & Font Settings */
+    .main {
+        background-color: #F8FAFC;
+        font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    }
+    
+    /* Custom Header Banner */
+    .brand-header {
+        background: linear-gradient(135deg, #0D2A4A 0%, #1E3A8A 100%);
+        padding: 24px;
+        border-radius: 12px;
+        color: white;
+        box-shadow: 0 4px 15px rgba(13, 42, 74, 0.15);
+        margin-bottom: 25px;
+    }
+    .brand-header h1 {
+        color: #FFFFFF !important;
+        font-size: 26px !important;
+        font-weight: 700 !important;
+        margin: 0 !important;
+        letter-spacing: 0.5px;
+    }
+    .brand-header p {
+        color: #93C5FD !important;
+        font-size: 13px !important;
+        margin-top: 4px !important;
+        font-weight: 500;
+    }
+
+    /* Instrument Card Section */
+    .instrument-card {
+        background-color: #FFFFFF;
+        border: 1px solid #E2E8F0;
+        border-radius: 12px;
+        padding: 20px;
+        margin-bottom: 20px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+        transition: all 0.2s ease-in-out;
+    }
+    .instrument-card:hover {
+        border-color: #CBD5E1;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+    }
+    
+    /* Section Headings */
+    .section-title {
+        font-size: 16px;
+        font-weight: 700;
+        color: #0D2A4A;
+        border-bottom: 2px solid #E2E8F0;
+        padding-bottom: 8px;
+        margin-bottom: 16px;
+    }
+    
+    /* Custom Metric Badges */
+    .metric-badge {
+        background-color: #EFF6FF;
+        border: 1px solid #BFDBFE;
+        color: #1E40AF;
+        padding: 6px 14px;
+        border-radius: 20px;
+        font-size: 12px;
+        font-weight: 600;
+        display: inline-block;
+    }
+
+    /* Streamlit Primary Button Styling */
+    .stButton>button[kind="primary"] {
+        background: linear-gradient(135deg, #0D2A4A 0%, #1E3A8A 100%) !important;
+        color: white !important;
+        border: none !important;
+        border-radius: 8px !important;
+        padding: 12px 24px !important;
+        font-weight: 600 !important;
+        box-shadow: 0 4px 10px rgba(13, 42, 74, 0.2) !important;
+    }
+    
+    /* Sidebar Styling */
+    [data-testid="stSidebar"] {
+        background-color: #FFFFFF;
+        border-right: 1px solid #E2E8F0;
+    }
+</style>
+""", unsafe_allow_html=True)
 
 # Initialize Gemini Client
 GEMINI_API_KEY = st.secrets.get("GEMINI_API_KEY", os.environ.get("GEMINI_API_KEY", ""))
@@ -30,10 +123,22 @@ if GEMINI_API_KEY:
     except Exception as e:
         st.sidebar.warning(f"Gemini API Init Error: {e}")
 
-st.title("🏥 BIOMED INTERNATIONAL (PVT) LTD")
-st.subheader("PROFESSIONAL LAP SCAN REPORT GENERATOR (AI-POWERED)")
+# --- BRAND HEADER ---
+st.markdown("""
+<div class="brand-header">
+    <div style="display: flex; justify-content: space-between; align-items: center;">
+        <div>
+            <h1>🏥 BIOMED INTERNATIONAL (PVT) LTD</h1>
+            <p>AESCULAP DIVISION — TECHNICAL INSPECTION & SCAN REPORT PORTAL</p>
+        </div>
+        <div>
+            <span class="metric-badge">System Status: Active</span>
+        </div>
+    </div>
+</div>
+""", unsafe_allow_html=True)
 
-# Comprehensive & Complete Sri Lankan Hospitals List (Categorized)
+# Hospitals List & Damage Suggestions
 SL_HOSPITALS = [
     "--- COLOMBO & SUBURBS (GOVT / SEMI-GOVT) ---",
     "Sri Jayewardenepura General Hospital (SJGH)",
@@ -212,7 +317,6 @@ SL_HOSPITALS = [
     "Other (Type manually)"
 ]
 
-# Detailed Technical Damage Suggestions
 DAMAGE_SUGGESTIONS = [
     "-- Select Detailed Technical Damage --",
     "Insulation Damage: Insulation layer cracked/peeled near the shaft tip. High risk of stray electrical current leaks (HF insulation failure) during diathermy.",
@@ -235,7 +339,6 @@ DAMAGE_SUGGESTIONS = [
     "Pass Inspection: Instrument in optimal condition. No physical defect, electrical leak, or optical distortion observed during inspection."
 ]
 
-# Load Excel Catalog File
 EXCEL_FILE = "Full Laparoscopy Articles Updated master file 07.07.2026.xlsx"
 
 @st.cache_data
@@ -259,7 +362,6 @@ def process_and_compress_image(image_file, max_size=(800, 800)):
     img.thumbnail(max_size, Image.Resampling.LANCZOS)
     return img
 
-# AI Image Analysis Function
 def analyze_damage_with_ai(image_file, item_name):
     if not client:
         return "API Key not configured properly.", "OK"
@@ -292,9 +394,8 @@ def analyze_damage_with_ai(image_file, item_name):
     except Exception as e:
         return f"Auto-analysis unavailable: {str(e)}", "OK"
 
-# Sidebar Inputs
-st.sidebar.header("📋 Report Details")
-
+# --- SIDEBAR DESIGN ---
+st.sidebar.markdown("### 📋 Meta Information")
 selected_hospital = st.sidebar.selectbox("Customer / Hospital", options=SL_HOSPITALS, index=1)
 
 if selected_hospital == "Other (Type manually)" or selected_hospital.startswith("---"):
@@ -305,12 +406,15 @@ else:
 selected_date = st.sidebar.date_input("Inspection Date", value=datetime.date.today())
 inspection_date_str = selected_date.strftime("%d %B %Y")
 
-engineer_name = st.sidebar.text_input("Engineer / Inspector Name", value="", placeholder="Enter Engineer Name...")
-report_no = st.sidebar.text_input("Report No.", value="")
+engineer_name = st.sidebar.text_input("Engineer / Inspector Name", value="", placeholder="e.g. Ishan / Dinushan")
+report_no = st.sidebar.text_input("Report Reference No.", value="", placeholder="e.g. SJGH/LAP/2026/01")
 department = st.sidebar.text_input("Department", value="Theatre / Laparoscopy")
 
-st.divider()
-st.header("🔬 Instruments List")
+st.sidebar.markdown("---")
+remarks = st.sidebar.text_area("General Remarks & Inspection Notes", value="All above instruments require official inspection and technical servicing. Please review the recommended actions.", height=120)
+
+# --- MAIN DASHBOARD SECTION ---
+st.markdown("<div class='section-title'>🔬 Surgical Instruments Inspection Entry</div>", unsafe_allow_html=True)
 
 if "instruments_count" not in st.session_state:
     st.session_state.instruments_count = 1
@@ -336,10 +440,16 @@ def remove_instrument():
 instrument_entries = []
 
 for i in range(st.session_state.instruments_count):
-    st.markdown(f"#### 🔪 Instrument Entry #{i+1}")
+    st.markdown(f"""
+    <div class="instrument-card">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+            <span style="font-weight: 700; color: #0D2A4A; font-size: 15px;">🔪 Instrument Entry #{i+1}</span>
+            <span style="font-size: 12px; color: #64748B;">Item Reference #{i+1:02d}</span>
+        </div>
+    """, unsafe_allow_html=True)
+    
     col1, col2 = st.columns([1, 2])
     
-    # Initialize Session State Keys for Persistence
     if f"name_{i}" not in st.session_state:
         st.session_state[f"name_{i}"] = ""
     if f"dam_{i}" not in st.session_state:
@@ -350,69 +460,59 @@ for i in range(st.session_state.instruments_count):
         st.session_state[f"show_comm_{i}"] = False
 
     with col1:
-        uploaded_file = st.file_uploader(f"Upload Photo #{i+1}", type=["jpg", "jpeg", "png"], key=f"img_{i}")
-        
+        uploaded_file = st.file_uploader(f"Upload Instrument Image #{i+1}", type=["jpg", "jpeg", "png"], key=f"img_{i}")
+        if uploaded_file:
+            st.image(uploaded_file, caption=f"Preview #{i+1}", use_container_width=True)
+
     with col2:
-        is_custom_art = st.checkbox("✍️ Type Custom Article No (Not in Master File)", key=f"is_custom_{i}")
+        is_custom_art = st.checkbox("✍️ Custom Article No (Not in Master List)", key=f"is_custom_{i}")
         
         if is_custom_art:
-            final_article_no = st.text_input(
-                f"Enter Article Number #{i+1}", 
-                key=f"manual_art_{i}", 
-                placeholder="Type Article No manually here..."
-            )
+            final_article_no = st.text_input(f"Enter Article No #{i+1}", key=f"manual_art_{i}", placeholder="Type Article No...")
         else:
             selected_art = st.selectbox(
-                f"Search & Select Article Number #{i+1}", 
+                f"Search Master Catalog Article No #{i+1}", 
                 options=article_options, 
                 index=None,
-                placeholder="🔍 Search Article No from Master File...",
+                placeholder="🔍 Type or Select Article Number...",
                 key=f"art_{i}", 
                 on_change=update_instrument_name, 
                 args=(i,)
             )
             final_article_no = selected_art if selected_art else ""
 
-        instrument_name = st.text_input(f"Instrument Name #{i+1}", key=f"name_{i}")
+        instrument_name = st.text_input(f"Instrument Description #{i+1}", key=f"name_{i}")
 
         if uploaded_file and GEMINI_API_KEY:
-            if st.button(f"🤖 AI Auto-Detect Damage for #{i+1}", key=f"ai_btn_{i}"):
-                with st.spinner("Analyzing image with Gemini AI..."):
+            if st.button(f"✨ AI Auto-Detect Technical Damage", key=f"ai_btn_{i}"):
+                with st.spinner("AI Analysis in progress..."):
                     ai_damage, ai_rec = analyze_damage_with_ai(uploaded_file, instrument_name)
                     st.session_state[f"dam_{i}"] = ai_damage
                     st.session_state[f"rec_{i}"] = ai_rec
-                st.success("Analysis Complete!")
+                st.success("Analysis Applied!")
 
         st.selectbox(
-            f"💡 Quick Damage Suggestions #{i+1}",
+            f"💡 Technical Fault Presets #{i+1}",
             options=DAMAGE_SUGGESTIONS,
             key=f"sug_{i}",
             on_change=update_damage_from_suggestion,
             args=(i,)
         )
 
-        damage_details = st.text_area(
-            f"Details of Damage #{i+1}", 
-            key=f"dam_{i}", 
-            placeholder="Select from detailed suggestions above, use AI, or type manually..."
-        )
+        damage_details = st.text_area(f"Technical Inspection Notes / Damage Details #{i+1}", key=f"dam_{i}", height=90)
 
-        # Optional Special Technical Comment Input
-        show_comment = st.checkbox("📝 Add Special Technical Comment / Remarks", key=f"show_comm_{i}")
+        show_comment = st.checkbox("📝 Include Engineer's Special Note", key=f"show_comm_{i}")
         tech_comment = ""
         if show_comment:
-            tech_comment = st.text_area(
-                f"Special Technical Comment #{i+1}", 
-                key=f"tech_comm_{i}", 
-                placeholder="Type special engineering comments, serial numbers, or notes here..."
-            )
+            tech_comment = st.text_area(f"Special Technical Comment #{i+1}", key=f"tech_comm_{i}", height=70)
 
-        # Recommendation options list with "Upgrade / New System Required"
         rec_options = ["Replace", "Service", "Repair", "Upgrade / New System Required", "OK"]
         curr_rec = st.session_state.get(f"rec_{i}", "Service")
         rec_idx = rec_options.index(curr_rec) if curr_rec in rec_options else 1
         
-        recommendation = st.selectbox(f"Recommendation #{i+1}", options=rec_options, index=rec_idx, key=f"rec_{i}")
+        recommendation = st.selectbox(f"Engineering Recommendation #{i+1}", options=rec_options, index=rec_idx, key=f"rec_{i}")
+
+    st.markdown("</div>", unsafe_allow_html=True) # End Card Div
 
     instrument_entries.append({
         "image": uploaded_file,
@@ -422,22 +522,20 @@ for i in range(st.session_state.instruments_count):
         "tech_comment": tech_comment if show_comment else "",
         "recommendation": recommendation
     })
-    st.markdown("---")
 
-col_add, col_remove, _ = st.columns([1.5, 1.5, 5])
+# Dashboard Controls
+col_add, col_remove, _ = st.columns([2, 2, 4])
 with col_add:
-    st.button("➕ Add Another Instrument", on_click=add_instrument, use_container_width=True)
+    st.button("➕ Add Instrument", on_click=add_instrument, use_container_width=True)
 with col_remove:
     if st.session_state.instruments_count > 1:
-        st.button("🗑️ Remove Last Instrument", on_click=remove_instrument, use_container_width=True)
+        st.button("🗑️ Remove Instrument", on_click=remove_instrument, use_container_width=True)
 
-st.divider()
+st.markdown("<br>", unsafe_allow_html=True)
 
-remarks = st.text_area("General Remarks", value="All above instruments require official inspection and technical servicing. Please review the recommended actions.")
-
-# --- GENERATE PDF REPORT (A4 SIZE) ---
-if st.button("📄 Generate Professional PDF Report", type="primary", use_container_width=True):
-    with st.spinner("Generating PDF Report..."):
+# --- GENERATE PDF REPORT ACTION ---
+if st.button("📄 Generate & Export Executive PDF Report (A4)", type="primary", use_container_width=True):
+    with st.spinner("Compiling & Generating Official PDF Document..."):
         buffer = io.BytesIO()
         doc = SimpleDocTemplate(
             buffer, 
@@ -451,14 +549,14 @@ if st.button("📄 Generate Professional PDF Report", type="primary", use_contai
         styles = getSampleStyleSheet()
         temp_files_to_remove = []
         
-        # --- COLOR PALETTE ---
+        # Color Palette
         navy_primary = colors.HexColor('#0D2A4A')
         navy_accent = colors.HexColor('#1E3A8A')
         ice_blue_bg = colors.HexColor('#F0F4F8')
         light_yellow_bg = colors.HexColor('#FEF9E7')
         border_navy = colors.HexColor('#BAC7D5')
         
-        # --- PARAGRAPH STYLES ---
+        # Styles
         company_name_style = ParagraphStyle('CompName', parent=styles['Heading1'], fontSize=15, leading=17, textColor=navy_primary, fontName='Helvetica-Bold')
         company_sub_style = ParagraphStyle('CompSub', parent=styles['Normal'], fontSize=7.5, leading=10, textColor=colors.HexColor('#475569'), fontName='Helvetica')
         
@@ -468,12 +566,11 @@ if st.button("📄 Generate Professional PDF Report", type="primary", use_contai
         label_style = ParagraphStyle('LabelNavy', parent=styles['Normal'], fontSize=8.5, leading=11, textColor=navy_primary, fontName='Helvetica-Bold')
         value_style = ParagraphStyle('ValueText', parent=styles['Normal'], fontSize=8.5, leading=11, textColor=colors.HexColor('#1F2937'), fontName='Helvetica')
         
-        # Table Header Style
         th_style = ParagraphStyle('TableHeader', parent=styles['Normal'], fontSize=8.0, leading=10, textColor=colors.white, fontName='Helvetica-Bold', alignment=1)
         cell_style = ParagraphStyle('TableCell', parent=styles['Normal'], fontSize=8, leading=11, textColor=colors.HexColor('#222222'), fontName='Helvetica')
         cell_center = ParagraphStyle('TableCellCenter', parent=cell_style, alignment=1)
 
-        # --- HEADER TABLE ---
+        # Header Table
         header_table_content = [
             [
                 Paragraph("<b>BIOMED INTERNATIONAL (PVT) LTD</b>", company_name_style),
@@ -500,7 +597,7 @@ if st.button("📄 Generate Professional PDF Report", type="primary", use_contai
         story.append(t_custom_header)
         story.append(Spacer(1, 10))
 
-        # --- METADATA HEADER BOX ---
+        # Metadata Header Box
         display_engineer = engineer_name if engineer_name.strip() else "Biomed Technical Team"
         header_data = [
             [Paragraph("Customer / Hospital:", label_style), Paragraph(hospital_name, value_style), Paragraph("Brand:", label_style), Paragraph("Aesculap", value_style)],
@@ -524,7 +621,7 @@ if st.button("📄 Generate Professional PDF Report", type="primary", use_contai
         story.append(t_header)
         story.append(Spacer(1, 12))
         
-        # --- INSTRUMENTS TABLE ---
+        # Table Content
         table_data = [[
             Paragraph("#", th_style), 
             Paragraph("PHOTO", th_style), 
@@ -544,27 +641,23 @@ if st.button("📄 Generate Professional PDF Report", type="primary", use_contai
                 img = img.convert("RGB")
                 img.save(temp_img_path, "JPEG", quality=90)
                 
-                # Image Size 130x130
                 img_obj = RLImage(temp_img_path, width=130, height=130)
                 temp_files_to_remove.append(temp_img_path)
                 
             rec = item["recommendation"]
             
-            # Highlight Colors for Recommendation Status
             if rec == "Replace":
-                rec_color = "#C0392B"  # Red
+                rec_color = "#C0392B"
             elif rec in ["Service", "Repair"]:
-                rec_color = "#D35400"  # Dark Orange
+                rec_color = "#D35400"
             elif rec == "Upgrade / New System Required":
-                rec_color = "#E67E22"  # Orange
+                rec_color = "#E67E22"
             else:
-                rec_color = "#27AE60"  # Green (OK)
+                rec_color = "#27AE60"
 
             rec_html = f"<b><font color='{rec_color}'>{rec.upper()}</font></b>"
-
             damage_text_formatted = item["damage"].replace('\n', '<br/>')
             
-            # Collect Technical Comments for separate box below table
             if item["tech_comment"].strip():
                 art_str = f" ({item['article_no']})" if item['article_no'] else ""
                 tech_comments_list.append(f"<b>Item #{idx+1}{art_str}:</b> {item['tech_comment'].replace('\n', '<br/>')}")
@@ -578,7 +671,6 @@ if st.button("📄 Generate Professional PDF Report", type="primary", use_contai
                 Paragraph(rec_html, cell_center)
             ])
         
-        # Table Layout
         t_main = Table(table_data, colWidths=[20, 135, 65, 100, 125, 90])
         t_main.setStyle(TableStyle([
             ('BACKGROUND', (0,0), (-1,0), navy_primary),
@@ -593,7 +685,6 @@ if st.button("📄 Generate Professional PDF Report", type="primary", use_contai
         story.append(t_main)
         story.append(Spacer(1, 15))
 
-        # --- SPECIAL TECHNICAL COMMENTS BOX (If Any Exists) ---
         if tech_comments_list:
             tech_html = f"<b><font color='{navy_accent.hexval()}'>📝 Special Technical Comments & Observations:</font></b><br/>" + "<br/>".join(tech_comments_list)
             t_tech_comm = Table([[Paragraph(tech_html, ParagraphStyle('TechCommStyle', parent=cell_style, fontSize=8.5, leading=12))]], colWidths=[535])
@@ -605,16 +696,8 @@ if st.button("📄 Generate Professional PDF Report", type="primary", use_contai
             story.append(t_tech_comm)
             story.append(Spacer(1, 15))
 
-        # --- GENERAL REMARKS BOX (FIXED TEXT OVERFLOW & PADDING) ---
-        remarks_style = ParagraphStyle(
-            'RemarksStyle', 
-            parent=styles['Normal'], 
-            fontSize=8.5, 
-            leading=12,
-            textColor=colors.HexColor('#222222'),
-            fontName='Helvetica'
-        )
-        
+        # General Remarks Box
+        remarks_style = ParagraphStyle('RemarksStyle', parent=styles['Normal'], fontSize=8.5, leading=12, textColor=colors.HexColor('#222222'), fontName='Helvetica')
         remarks_html = f"<b><font color='{navy_primary.hexval()}'>General Remarks & Inspection Notes:</font></b><br/>{remarks.replace('\n', '<br/>')}"
         
         t_remarks = Table([[Paragraph(remarks_html, remarks_style)]], colWidths=[535])
@@ -628,11 +711,9 @@ if st.button("📄 Generate Professional PDF Report", type="primary", use_contai
             ('VALIGN', (0,0), (-1,-1), 'TOP')
         ]))
         story.append(t_remarks)
-        
-        # Spacer for proper separation between Remarks & Signatures
         story.append(Spacer(1, 35))
         
-        # --- SIGNATURE SECTION (KEEPTOGETHER FIX) ---
+        # Signature Block
         sig_label_style = ParagraphStyle('SigLabel', parent=cell_style, fontSize=8.5, leading=12, textColor=navy_primary)
         t_sig = Table([[
             Paragraph(f"<b>Inspected By ({display_engineer}):</b><br/><br/><br/>__________________________________<br/>Signature & Date", sig_label_style),
@@ -641,20 +722,16 @@ if st.button("📄 Generate Professional PDF Report", type="primary", use_contai
         
         story.append(KeepTogether([t_sig]))
         
-        # --- WATERMARK (AESCULAP) & FOOTER FUNCTION ---
+        # Watermark & Footer
         def add_watermark_and_footer(canvas, doc):
             canvas.saveState()
-            
-            # Watermark (AESCULAP)
             canvas.setFont('Helvetica-Bold', 60)
             canvas.setFillColor(colors.Color(0.85, 0.85, 0.85, alpha=0.25)) 
             canvas.translate(A4[0] / 2.0, A4[1] / 2.0)
             canvas.rotate(45)
             canvas.drawCentredString(0, 0, "AESCULAP")
-            
             canvas.restoreState()
             
-            # Footer
             canvas.saveState()
             canvas.setFont('Helvetica-BoldOblique', 8)
             canvas.setFillColor(colors.HexColor('#7F8C8D'))
@@ -664,25 +741,23 @@ if st.button("📄 Generate Professional PDF Report", type="primary", use_contai
         doc.build(story, onFirstPage=add_watermark_and_footer, onLaterPages=add_watermark_and_footer)
         pdf_data = buffer.getvalue()
         
-        # Cleanup Temp Images
         for tf in temp_files_to_remove:
             if os.path.exists(tf):
                 os.remove(tf)
 
-    st.success("Executive A4 PDF Report Generated!")
+    st.success("Executive PDF Report Generated!")
     
-    # Live Preview (If pdf2image available)
     if PDF2IMAGE_AVAILABLE:
         try:
             preview_images = convert_from_bytes(pdf_data, first_page=1, last_page=1)
             if preview_images:
-                st.subheader("🖼️ PDF Live Image Preview")
-                st.image(preview_images[0], caption="Generated Technical Report Page 1", use_container_width=True)
-        except Exception as preview_err:
-            st.info("Download PDF to view official layout.")
+                st.subheader("🖼️ Live Document Preview")
+                st.image(preview_images[0], caption="Generated Document Layout Preview", use_container_width=True)
+        except Exception:
+            pass
 
     st.download_button(
-        label="📥 Download Professional PDF Report (A4)",
+        label="📥 Download Official PDF Report",
         data=pdf_data,
         file_name=f"Lap_Scan_Report_{report_no.replace('/', '_') if report_no else 'Executive'}.pdf",
         mime="application/pdf"
