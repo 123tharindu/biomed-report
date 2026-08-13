@@ -4,6 +4,9 @@ import datetime
 import io
 import os
 import requests
+import openpyxl
+from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
+from openpyxl.utils import get_column_letter
 from PIL import Image, ImageOps
 from google import genai
 from reportlab.lib.pagesizes import A4
@@ -193,10 +196,102 @@ def sync_to_google_sheet(summary_data):
             return False
     return False
 
+def generate_professional_excel(instruments_data, hospital_name, engineer_name, report_no, date_str):
+    wb = openpyxl.Workbook()
+    ws = wb.active
+    ws.title = "Inspection Summary"
+    ws.views.sheetView[0].showGridLines = True
+
+    NAVY_HEADER = "0D2A4A"
+    ICE_BLUE = "F0F4F8"
+    WHITE = "FFFFFF"
+    BORDER_COLOR = "CBD5E1"
+    TEXT_MAIN = "0F172A"
+
+    font_title = Font(name="Arial", size=13, bold=True, color="FFFFFF")
+    font_header = Font(name="Arial", size=10, bold=True, color="FFFFFF")
+    font_data = Font(name="Arial", size=9, color=TEXT_MAIN)
+    font_bold = Font(name="Arial", size=9, bold=True, color=TEXT_MAIN)
+    
+    fill_navy = PatternFill(start_color=NAVY_HEADER, end_color=NAVY_HEADER, fill_type="solid")
+    fill_zebra = PatternFill(start_color=ICE_BLUE, end_color=ICE_BLUE, fill_type="solid")
+    fill_white = PatternFill(start_color=WHITE, end_color=WHITE, fill_type="solid")
+    
+    align_center = Alignment(horizontal="center", vertical="center", wrap_text=True)
+    align_left = Alignment(horizontal="left", vertical="center", wrap_text=True)
+    
+    thin_border = Side(border_style="thin", color=BORDER_COLOR)
+    cell_border = Border(left=thin_border, right=thin_border, top=thin_border, bottom=thin_border)
+
+    ws.merge_cells("A1:F1")
+    ws["A1"] = "BIOMED INTERNATIONAL (PVT) LTD — TECHNICAL INSPECTION REPORT"
+    ws["A1"].font = font_title
+    ws["A1"].fill = fill_navy
+    ws["A1"].alignment = align_center
+    ws.row_dimensions[1].height = 28
+
+    meta_info = [
+        ("Customer / Hospital:", hospital_name, "Inspection Date:", date_str),
+        ("Engineer Name:", engineer_name, "Report Ref No:", report_no)
+    ]
+    
+    for r_idx, row in enumerate(meta_info, start=3):
+        ws.cell(row=r_idx, column=1, value=row[0]).font = font_bold
+        ws.cell(row=r_idx, column=2, value=row[1]).font = font_data
+        ws.cell(row=r_idx, column=4, value=row[2]).font = font_bold
+        ws.cell(row=r_idx, column=5, value=row[3]).font = font_data
+        ws.row_dimensions[r_idx].height = 20
+
+    headers = ["#", "ARTICLE NO", "INSTRUMENT DESCRIPTION", "TECHNICAL DAMAGE DETAILS", "RECOMMENDATION", "STATUS"]
+    header_row = 6
+    ws.row_dimensions[header_row].height = 25
+    
+    for c_idx, header in enumerate(headers, start=1):
+        cell = ws.cell(row=header_row, column=c_idx, value=header)
+        cell.font = font_header
+        cell.fill = fill_navy
+        cell.alignment = align_center
+        cell.border = cell_border
+
+    start_data_row = 7
+    for idx, item in enumerate(instruments_data):
+        current_row = start_data_row + idx
+        ws.row_dimensions[current_row].height = 24
+        row_fill = fill_zebra if idx % 2 == 1 else fill_white
+        
+        rec = item.get("recommendation", "Service")
+        status_text = "ACTION REQ." if rec == "Replace" else "PASSED / OK"
+        rec_font = Font(name="Arial", size=9, bold=True, color="B91C1C" if rec == "Replace" else "15803D")
+
+        row_data = [
+            (idx + 1, align_center, font_data),
+            (item.get("art_no", ""), align_center, font_bold),
+            (item.get("name", ""), align_left, font_data),
+            (item.get("damage", ""), align_left, font_data),
+            (rec.upper(), align_center, rec_font),
+            (status_text, align_center, font_data)
+        ]
+
+        for c_idx, (val, align, font_style) in enumerate(row_data, start=1):
+            cell = ws.cell(row=current_row, column=c_idx, value=val)
+            cell.font = font_style
+            cell.fill = row_fill
+            cell.alignment = align
+            cell.border = cell_border
+
+    col_widths = {1: 6, 2: 18, 3: 38, 4: 42, 5: 20, 6: 15}
+    for col_idx, width in col_widths.items():
+        col_letter = get_column_letter(col_idx)
+        ws.column_dimensions[col_letter].width = width
+
+    buffer = io.BytesIO()
+    wb.save(buffer)
+    buffer.seek(0)
+    return buffer.getvalue()
+
 if "num_instruments" not in st.session_state:
     st.session_state.num_instruments = 1
 
-# Callback to Auto-update Description on Select
 def update_desc_callback(idx):
     sel_art = st.session_state.get(f"s_art_{idx}")
     if sel_art and sel_art in catalog_dict:
@@ -260,7 +355,6 @@ for i in range(st.session_state.num_instruments):
                 on_change=update_desc_callback,
                 args=(i,)
             )
-            # Text input uses session_state value automatically
             inst_name = st.text_input(f"Instrument Description #{i+1}", key=f"name_{i}")
 
         inst_item["art_no"] = art_no
@@ -413,7 +507,7 @@ if st.button("📄 Generate PDF Report & Sync Summary", type="primary", use_cont
         story.append(t_rem)
         story.append(Spacer(1, 15))
 
-        # PDF Signatures Section (NEW ADDITION)
+        # PDF Signatures Section
         sig_title_style = ParagraphStyle('SigTitle', parent=styles['Normal'], fontSize=8, leading=10, textColor=navy_primary, fontName='Helvetica-Bold')
         sig_text_style = ParagraphStyle('SigText', parent=styles['Normal'], fontSize=7.5, leading=9, textColor=colors.HexColor('#475569'))
         
@@ -423,7 +517,7 @@ if st.button("📄 Generate PDF Report & Sync Summary", type="primary", use_cont
                 Paragraph("<b>Customer Acknowledgment / Hospital Stamp:</b>", sig_title_style)
             ],
             [
-                Spacer(1, 30), # Space for physical signature
+                Spacer(1, 30),
                 Spacer(1, 30)
             ],
             [
@@ -447,11 +541,15 @@ if st.button("📄 Generate PDF Report & Sync Summary", type="primary", use_cont
         for tf in temp_files:
             if os.path.exists(tf): os.remove(tf)
 
+        # Google Sheet එකට Description එකත් එක්කම Sync කිරීම
+        all_descriptions = ", ".join([item.get("name", "") for item in instruments_data if item.get("name")])
+
         summary_payload = {
             "report_no": disp_rep_no,
             "date": date_str,
             "hospital": disp_hospital,
             "engineer": disp_engineer,
+            "instrument_name": all_descriptions,
             "total_instruments": len(instruments_data),
             "replace_count": replace_count,
             "service_count": service_count,
@@ -461,4 +559,23 @@ if st.button("📄 Generate PDF Report & Sync Summary", type="primary", use_cont
         synced = sync_to_google_sheet(summary_payload)
         
         st.success("✅ PDF Report Generated & Summary Synced to Google Sheet!")
-        st.download_button("📥 Download PDF Report", data=pdf_bytes, file_name=f"Lap_Report_{disp_rep_no}.pdf", mime="application/pdf")
+        
+        col_dl1, col_dl2 = st.columns(2)
+        with col_dl1:
+            st.download_button("📥 Download PDF Report", data=pdf_bytes, file_name=f"Lap_Report_{disp_rep_no}.pdf", mime="application/pdf", use_container_width=True)
+        
+        with col_dl2:
+            excel_bytes = generate_professional_excel(
+                instruments_data=instruments_data,
+                hospital_name=disp_hospital,
+                engineer_name=disp_engineer,
+                report_no=disp_rep_no,
+                date_str=date_str
+            )
+            st.download_button(
+                label="📊 Download Professional Excel Summary",
+                data=excel_bytes,
+                file_name=f"Lap_Report_Summary_{disp_rep_no}.xlsx",
+                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                use_container_width=True
+            )
