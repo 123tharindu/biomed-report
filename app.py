@@ -53,10 +53,8 @@ st.markdown("""
 GEMINI_API_KEY = st.secrets.get("GEMINI_API_KEY", os.environ.get("GEMINI_API_KEY", ""))
 client = genai.Client(api_key=GEMINI_API_KEY) if GEMINI_API_KEY else None
 
-# Complete Sri Lanka Hospitals List
 SL_HOSPITALS = [
     "-- Select Hospital / Institute --",
-    # National & Specialized Hospitals
     "National Hospital of Sri Lanka (NHSL Colombo)",
     "National Hospital Kandy",
     "Sri Jayewardenepura General Hospital (SJGH)",
@@ -67,8 +65,6 @@ SL_HOSPITALS = [
     "National Institute of Mental Health (Angoda)",
     "National Eye Hospital Colombo",
     "Chest Hospital Welisara",
-    
-    # Teaching Hospitals
     "Colombo South Teaching Hospital (Kalubowila)",
     "Colombo North Teaching Hospital (Ragama)",
     "Teaching Hospital Peradeniya",
@@ -81,8 +77,6 @@ SL_HOSPITALS = [
     "Teaching Hospital Ratnapura",
     "Teaching Hospital Gampaha",
     "Teaching Hospital Kalutara",
-    
-    # District General Hospitals (DGH)
     "District General Hospital Chilaw",
     "District General Hospital Negombo",
     "District General Hospital Matara",
@@ -102,8 +96,6 @@ SL_HOSPITALS = [
     "District General Hospital Matale",
     "District General Hospital Gampaha",
     "District General Hospital Nawalapitiya",
-    
-    # Base Hospitals (BH)
     "Base Hospital Horana",
     "Base Hospital Panadura",
     "Base Hospital Homagama",
@@ -119,14 +111,10 @@ SL_HOSPITALS = [
     "Base Hospital Dambulla",
     "Base Hospital Point Pedro",
     "Base Hospital Kantale",
-    
-    # Tri-Forces & Police Hospitals
     "Army Hospital Colombo (Narahenpita)",
     "Navy Hospital Welisara",
     "Air Force Hospital Katunayake",
     "Police Hospital Narahenpita",
-    
-    # Private Hospitals & Medical Centers
     "Asiri Central Hospital (Colombo 10)",
     "Asiri Surgical Hospital (Narahenpita)",
     "Asiri Hospital Matara",
@@ -143,7 +131,6 @@ SL_HOSPITALS = [
     "Joseph Fraser Memorial Hospital",
     "Pannipitiya Nursing Home",
     "Melsta Hospital Ragama",
-    
     "Other (Type manually)"
 ]
 
@@ -186,7 +173,6 @@ def analyze_damage_with_ai(image_file, item_name):
         compressed_img = process_and_compress_image(image_file, max_size=(600, 600))
         prompt = f"Examine surgical instrument '{item_name}' for damage. Line 1: Technical damage (Max 20 words). Line 2: Recommendation (Replace/Repair/Service/OK)."
         
-        # Google GenAI SDK
         response = client.models.generate_content(
             model='gemini-2.0-flash', 
             contents=[compressed_img, prompt]
@@ -196,7 +182,6 @@ def analyze_damage_with_ai(image_file, item_name):
     except Exception as e:
         return f"AI Error: {str(e)}", "Service"
 
-# Function to Send Data to Google Sheet Webhook
 def sync_to_google_sheet(summary_data):
     webhook_url = st.secrets.get("WEBHOOK_URL", "")
     if webhook_url:
@@ -208,9 +193,14 @@ def sync_to_google_sheet(summary_data):
             return False
     return False
 
-# Dynamic instrument count tracker
 if "num_instruments" not in st.session_state:
     st.session_state.num_instruments = 1
+
+# Callback to Auto-update Description on Select
+def update_desc_callback(idx):
+    sel_art = st.session_state.get(f"s_art_{idx}")
+    if sel_art and sel_art in catalog_dict:
+        st.session_state[f"name_{idx}"] = catalog_dict[sel_art]
 
 # ==========================================
 # 3. UI HEADER & SIDEBAR
@@ -225,7 +215,6 @@ with h_col1:
 with h_col2:
     st.markdown("<div class='brand-header'><h1>BIOMED INTERNATIONAL (PVT) LTD</h1><p>AESCULAP DIVISION — TECHNICAL INSPECTION REPORT PORTAL</p></div>", unsafe_allow_html=True)
 
-# Sidebar - Meta Information
 st.sidebar.markdown("### 📋 Meta Information")
 hospital_sel = st.sidebar.selectbox("Customer / Hospital", options=SL_HOSPITALS)
 if hospital_sel == "Other (Type manually)":
@@ -264,9 +253,15 @@ for i in range(st.session_state.num_instruments):
             art_no = st.text_input(f"Enter Article No #{i+1}", key=f"c_art_{i}")
             inst_name = st.text_input(f"Instrument Description #{i+1}", key=f"name_{i}")
         else:
-            art_no = st.selectbox(f"Search Master Catalog #{i+1}", options=[""] + article_options, key=f"s_art_{i}")
-            default_name = catalog_dict.get(art_no, "") if art_no else ""
-            inst_name = st.text_input(f"Instrument Description #{i+1}", value=default_name, key=f"name_{i}")
+            art_no = st.selectbox(
+                f"Search Master Catalog #{i+1}", 
+                options=[""] + article_options, 
+                key=f"s_art_{i}",
+                on_change=update_desc_callback,
+                args=(i,)
+            )
+            # Text input uses session_state value automatically
+            inst_name = st.text_input(f"Instrument Description #{i+1}", key=f"name_{i}")
 
         inst_item["art_no"] = art_no
         inst_item["name"] = inst_name
@@ -294,7 +289,6 @@ for i in range(st.session_state.num_instruments):
     instruments_data.append(inst_item)
     st.markdown("</div>", unsafe_allow_html=True)
 
-# Dynamic Buttons
 col_add, col_rem, _ = st.columns([2, 2, 4])
 with col_add:
     if st.button("➕ Add Instrument"):
@@ -417,6 +411,35 @@ if st.button("📄 Generate PDF Report & Sync Summary", type="primary", use_cont
         t_rem = Table([[Paragraph(remarks_html, cell_style)]], colWidths=[555])
         t_rem.setStyle(TableStyle([('BACKGROUND', (0,0), (-1,-1), ice_blue_bg), ('BOX', (0,0), (-1,-1), 1, navy_primary), ('PADDING', (0,0), (-1,-1), 5)]))
         story.append(t_rem)
+        story.append(Spacer(1, 15))
+
+        # PDF Signatures Section (NEW ADDITION)
+        sig_title_style = ParagraphStyle('SigTitle', parent=styles['Normal'], fontSize=8, leading=10, textColor=navy_primary, fontName='Helvetica-Bold')
+        sig_text_style = ParagraphStyle('SigText', parent=styles['Normal'], fontSize=7.5, leading=9, textColor=colors.HexColor('#475569'))
+        
+        sig_data = [
+            [
+                Paragraph("<b>Inspected & Prepared By:</b>", sig_title_style),
+                Paragraph("<b>Customer Acknowledgment / Hospital Stamp:</b>", sig_title_style)
+            ],
+            [
+                Spacer(1, 30), # Space for physical signature
+                Spacer(1, 30)
+            ],
+            [
+                Paragraph(f"........................................................<br/><b>Service Engineer:</b> {disp_engineer}<br/>Biomed International (Pvt) Ltd", sig_text_style),
+                Paragraph("........................................................<br/><b>Authorized Signature & Stamp</b><br/>Hospital / Theatre Unit", sig_text_style)
+            ]
+        ]
+        
+        t_sig = Table(sig_data, colWidths=[270, 285])
+        t_sig.setStyle(TableStyle([
+            ('VALIGN', (0,0), (-1,-1), 'TOP'),
+            ('LEFTPADDING', (0,0), (-1,-1), 0),
+            ('RIGHTPADDING', (0,0), (-1,-1), 0),
+            ('BOTTOMPADDING', (0,0), (-1,-1), 2),
+        ]))
+        story.append(t_sig)
 
         doc.build(story)
         pdf_bytes = buffer.getvalue()
@@ -424,7 +447,6 @@ if st.button("📄 Generate PDF Report & Sync Summary", type="primary", use_cont
         for tf in temp_files:
             if os.path.exists(tf): os.remove(tf)
 
-        # Build Summary Payload for Sheet
         summary_payload = {
             "report_no": disp_rep_no,
             "date": date_str,
@@ -436,7 +458,6 @@ if st.button("📄 Generate PDF Report & Sync Summary", type="primary", use_cont
             "logged_at": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         }
 
-        # Trigger Sheet Sync
         synced = sync_to_google_sheet(summary_payload)
         
         st.success("✅ PDF Report Generated & Summary Synced to Google Sheet!")
