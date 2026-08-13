@@ -1,99 +1,120 @@
 import datetime
-from flask import Flask, jsonify, request
 import gspread
-from oauth2client.service_account import ServiceAccountCredentials
+from google.oauth2.service_account import Credentials
+import streamlit as st
 
-app = Flask(__name__)
+st.set_page_config(page_title="Biomed Lap Scan Portal", layout="centered")
+st.title("Biomed Lap Inspection Portal")
 
-# --- Google Sheets API Setup ---
+
+# --- Google Sheets Authentication ---
+@st.cache_resource
 def get_google_sheet():
-    # Google Credentials සඳහා Scope එක
-    scope = [
-        "https://spreadsheets.google.com/feeds",
-        "https://www.googleapis.com/auth/drive",
-    ]
+    # Google credentials සකසා ගැනීම
+    scopes = ["https://www.googleapis.com/auth/spreadsheets"]
 
-    # credentials.json ෆයිල් එක app.py තියෙන Folder එකේම තිබිය යුතුය
-    creds = ServiceAccountCredentials.from_json_keyfile_name(
-        "credentials.json", scope
-    )
+    # Streamlit Secrets වලින් හෝ local credentials.json මගින් connect වීම
+    if "gcp_service_account" in st.secrets:
+        creds = Credentials.from_service_account_info(
+            st.secrets["gcp_service_account"], scopes=scopes
+        )
+    else:
+        creds = Credentials.from_service_account_file(
+            "credentials.json", scopes=scopes
+        )
+
     client = gspread.authorize(creds)
-
-    # Google Sheet එක Open කරගැනීම
-    sheet = client.open("Biomed Lap Inspection Summary").sheet1
-    return sheet
+    return client.open("Biomed Lap Inspection Summary").sheet1
 
 
-# --- API Endpoint to Submit Inspection Data ---
-@app.route("/submit-inspection", methods=["POST"])
-def submit_inspection():
+# --- Data Submission Function ---
+def save_inspection(
+    report_no,
+    date,
+    hospital,
+    engineer,
+    instrument_names,
+    total_inst,
+    replace_c,
+    service_c,
+):
     try:
-        data = request.get_json()
-
-        # Request එකෙන් එන දත්ත ලබාගැනීම
-        report_no = data.get("report_no")
-        date = data.get("date")
-        hospital = data.get("hospital", "N/A")
-        engineer = data.get("engineer")
-        instrument_names = data.get(
-            "instrument_names"
-        )  # උදා: "Laparoscope, Scissors, Forceps"
-        total_instruments = data.get("total_instruments", 0)
-        replace_count = data.get("replace_count", 0)
-        service_count = data.get("service_count", 0)
-
-        # 1. Google Sheet එක සම්බන්ධ කරගැනීම
         sheet = get_google_sheet()
         all_rows = sheet.get_all_values()
 
-        # 2. Duplicate Check: අන්තිම Row එකේ Report No එකත් දැන් එන Report No එකත් සමානදැයි බලයි
-        if len(all_rows) > 1:
-            last_row = all_rows[-1]
-            if last_row[0] == str(report_no):
-                return (
-                    jsonify(
-                        {
-                            "status": "warning",
-                            "message": "Duplicate submission detected and ignored.",
-                        }
-                    ),
-                    200,
-                )
+        # Duplicate Check (අන්තිම row එකේ Report No එක සමාන නම් නවතන්න)
+        if len(all_rows) > 1 and all_rows[-1][0] == str(report_no):
+            return "duplicate"
 
-        # 3. Logged timestamp සකසා ගැනීම
         logged_at = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
-        # 4. Sheet එකට පිළිවෙලට Row එක සකස් කිරීම
-        # Columns: Report No | Date | Hospital | Engineer | Instrument Names | Total | Replace | Service | Logged At
-        row_data = [
+        # Row Data පිළිවෙලට සකස් කිරීම
+        row = [
             report_no,
-            date,
+            str(date),
             hospital,
             engineer,
             instrument_names,
-            total_instruments,
-            replace_count,
-            service_count,
+            total_inst,
+            replace_c,
+            service_c,
             logged_at,
         ]
 
-        # 5. Row එක Sheet එකට append කිරීම
-        sheet.append_row(row_data)
+        sheet.append_row(row)
+        return "success"
+    except Exception as e:
+        return str(e)
 
-        return (
-            jsonify(
-                {
-                    "status": "success",
-                    "message": "Data logged successfully!",
-                    "data": row_data,
-                }
-            ),
-            200,
+
+# --- Streamlit UI Form ---
+with st.form("inspection_form", clear_on_submit=True):
+    st.subheader("Inspection Entry Form")
+
+    report_no = st.text_input("Report No")
+    date = st.date_input("Date", datetime.date.today())
+    hospital = st.text_input("Hospital Name", "N/A")
+    engineer = st.text_input("Engineer Name")
+    instrument_names = st.text_area(
+        "Instrument Names (Comma separated)",
+        placeholder="Laparoscope, Scissors, Forceps",
+    )
+
+    col1, col2, col3 = st.columns(3)
+    with col1:
+        total_inst = st.number_input(
+            "Total Instruments", min_value=0, step=1, value=0
+        )
+    with col2:
+        replace_c = st.number_input(
+            "Replace Count", min_value=0, step=1, value=0
+        )
+    with col3:
+        service_c = st.number_input(
+            "Service/Repair Count", min_value=0, step=1, value=0
         )
 
-    except Exception as e:
-        return jsonify({"status": "error", "message": str(e)}), 500
+    submit_button = st.form_submit_button("Submit Record")
 
+    if submit_button:
+        if not report_no or not engineer:
+            st.warning("Please fill in Report No and Engineer Name!")
+        else:
+            with st.spinner("Saving to Google Sheets..."):
+                res = save_inspection(
+                    report_no,
+                    date,
+                    hospital,
+                    engineer,
+                    instrument_names,
+                    total_inst,
+                    replace_c,
+                    service_c,
+                )
 
-if __name__ == "__main__":
-    app.run(debug=True, port=5000)
+                if res == "success":
+                    st.success("Record added successfully to Google Sheet!")
+                elif res == "duplicate":
+                    st.warning("Duplicate submission detected! Row skipped.")
+                else:
+                    st.error(f"Error occurred: {res}")
