@@ -46,8 +46,8 @@ st.markdown(
         box-shadow: 0 4px 15px rgba(13, 42, 74, 0.15); margin-bottom: 25px;
         position: relative;
     }
-    .brand-header h1 { color: #FFFFFF !important; font-size: 22px !important; font-weight: 800 !important; margin: 0 !important; line-height: 1.2; }
-    .brand-header p { color: #93C5FD !important; font-size: 11px !important; margin-top: 6px !important; font-weight: 600; letter-spacing: 0.5px; }
+    .brand-header h1 { color: #FFFFFF !important; font-size: 20px !important; font-weight: 800 !important; margin: 0 !important; line-height: 1.2; }
+    .brand-header p { color: #93C5FD !important; font-size: 11px !important; margin-top: 4px !important; font-weight: 600; letter-spacing: 0.5px; }
     .status-badge {
         position: absolute; top: 18px; right: 24px;
         background-color: #FFFFFF; color: #0D2A4A;
@@ -146,9 +146,13 @@ DAMAGE_SUGGESTIONS = [
     "-- Select Detailed Technical Damage --",
     "Sealing Cap Damage: Silicone sealing element is torn/damaged. High risk of pneumoperitoneum gas leakage during insufflation.",
     "Insulation Damage: Insulation layer cracked/peeled near the shaft tip. High risk of stray electrical current leaks (HF insulation failure).",
+    "Shaft Insulation Micro-Cracks: Flaking detected along middle shaft. High risk of unwanted tissue burns during HF activation.",
     "Shaft Deformation: Outer shaft tube is visibly bent/misaligned, causing severe internal friction and restricting jaw movement.",
     "Jaw Alignment Failure: Working jaws are misaligned with worn-out gripping teeth. Instrument fails to hold tissue securely.",
+    "Ratchet Lock Failure: Handle locking mechanism/ratchet teeth worn out. Instrument fails to hold position under tension.",
     "Scissor Blade Bluntness: Scissor blades show heavy dullness and burrs along the cutting edge. Fails clean cutting.",
+    "HF Connector Damage: Monopolar/Bipolar terminal pin bent or corroded. Poor electrical contact during electrosurgery.",
+    "Trocar Stopcock Leak: Gas valve/stopcock lever worn out and leaking. Cannot maintain stable intra-abdominal pressure.",
     "Corrosion & Pitting: Severe pitting corrosion and rust stains observed near joints due to chemical sterilization.",
     "Pass Inspection: Instrument in optimal condition. No physical defect or operational damage observed.",
 ]
@@ -392,13 +396,18 @@ def update_desc_callback(idx):
 # 3. UI HEADER & SIDEBAR
 # ==========================================
 st.markdown(
-    """
+    f"""
     <div class="brand-header">
         <div class="status-badge">
             System Status:<br><span style="color:#00875A;">Active</span>
         </div>
-        <h1>🏥 BIOMED INTERNATIONAL (PVT) LTD</h1>
-        <p>AESCULAP DIVISION — TECHNICAL INSPECTION & SCAN REPORT PORTAL</p>
+        <div style="display: flex; align-items: center; gap: 15px;">
+            <img src="{LOGO_URL}" style="height: 50px; background-color: white; padding: 4px; border-radius: 6px;" alt="BMI Logo">
+            <div>
+                <h1 style="margin: 0;">BIOMED INTERNATIONAL (PVT) LTD</h1>
+                <p style="margin: 2px 0 0 0;">AESCULAP DIVISION — TECHNICAL INSPECTION & SCAN REPORT PORTAL</p>
+            </div>
+        </div>
     </div>
 """,
     unsafe_allow_html=True,
