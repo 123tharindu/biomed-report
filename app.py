@@ -226,7 +226,7 @@ catalog_dict = load_catalog(EXCEL_FILE)
 article_options = sorted(list(catalog_dict.keys()))
 
 
-def process_and_compress_image(image_file, max_size=(600, 600)):
+def process_and_compress_image(image_file, max_size=(800, 800)):
     img = Image.open(image_file)
     img = ImageOps.exif_transpose(img)
     img.thumbnail(max_size, Image.Resampling.LANCZOS)
@@ -238,7 +238,7 @@ def analyze_damage_with_ai(image_file, item_name):
         return "API Key not configured properly.", "OK"
     try:
         compressed_img = process_and_compress_image(
-            image_file, max_size=(600, 600)
+            image_file, max_size=(800, 800)
         )
         prompt = f"Examine surgical instrument '{item_name}' for damage. Line 1: Technical damage (Max 20 words). Line 2: Recommendation (Replace/Repair/Service/OK)."
 
@@ -494,7 +494,7 @@ for i in range(st.session_state.num_instruments):
             key=f"uploader_{i}",
         )
         if inst_item["image"]:
-            st.image(inst_item["image"], width=180)
+            st.image(inst_item["image"], width=220)
 
     with col2:
         is_custom = st.checkbox("✍️ Custom Article No", key=f"custom_chk_{i}")
@@ -630,7 +630,7 @@ if st.button(
             textColor=colors.HexColor("#1F2937"),
         )
         cell_style = ParagraphStyle(
-            "TableCell", parent=styles["Normal"], fontSize=7.5, leading=10
+            "TableCell", parent=styles["Normal"], fontSize=8, leading=11
         )
         cell_center = ParagraphStyle(
             "TableCellCenter", parent=cell_style, alignment=1
@@ -638,8 +638,8 @@ if st.button(
         th_style = ParagraphStyle(
             "TH",
             parent=cell_style,
-            fontSize=7,
-            leading=9,
+            fontSize=7.5,
+            leading=9.5,
             textColor=colors.white,
             fontName="Helvetica-Bold",
             alignment=1,
@@ -744,10 +744,10 @@ if st.button(
         story.append(t_meta)
         story.append(Spacer(1, 8))
 
-        # PDF Instruments Table
+        # PDF Instruments Table - Enlarged Photo Column
         table_data = [[
             Paragraph("#", th_style),
-            Paragraph("PHOTO", th_style),
+            Paragraph("INSPECTION PHOTO", th_style),
             Paragraph("ARTICLE NO", th_style),
             Paragraph("INSTRUMENT NAME", th_style),
             Paragraph("DETAILS OF DAMAGE", th_style),
@@ -758,12 +758,13 @@ if st.button(
         service_count = 0
 
         for idx, item in enumerate(instruments_data):
-            img_cell = Paragraph("No Image", cell_center)
+            img_cell = Paragraph("No Image Attached", cell_center)
             if item["image"]:
                 t_path = f"temp_p_{idx}.jpg"
                 p_img = process_and_compress_image(item["image"])
                 p_img.convert("RGB").save(t_path, "JPEG")
-                img_cell = RLImage(t_path, width=65, height=65)
+                # Enlarged photo dimensions (Width: 120, Height: 110)
+                img_cell = RLImage(t_path, width=120, height=110)
                 temp_files.append(t_path)
 
             rec_color = (
@@ -792,7 +793,8 @@ if st.button(
                 ),
             ])
 
-        t_main = Table(table_data, colWidths=[20, 75, 70, 120, 170, 100])
+        # Widths adjusted to give 130pt to Photo Column (Total width = 555pt A4 width)
+        t_main = Table(table_data, colWidths=[20, 130, 65, 105, 145, 90])
         t_main.setStyle(
             TableStyle([
                 ("BACKGROUND", (0, 0), (-1, 0), navy_primary),
@@ -800,8 +802,8 @@ if st.button(
                 ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
                 ("TOPPADDING", (0, 0), (-1, -1), 4),
                 ("BOTTOMPADDING", (0, 0), (-1, -1), 4),
-                ("LEFTPADDING", (0, 0), (-1, -1), 2),
-                ("RIGHTPADDING", (0, 0), (-1, -1), 2),
+                ("LEFTPADDING", (0, 0), (-1, -1), 3),
+                ("RIGHTPADDING", (0, 0), (-1, -1), 3),
             ])
         )
         story.append(t_main)
@@ -896,12 +898,12 @@ if st.button(
 
         synced = sync_to_google_sheet(summary_payload)
 
-        st.success("✅ PDF Report Generated & Summary Synced to Google Sheet!")
+        st.success("✅ Large Photo PDF Report Generated & Summary Synced!")
 
         col_dl1, col_dl2 = st.columns(2)
         with col_dl1:
             st.download_button(
-                "📥 Download PDF Report",
+                "📥 Download PDF Report (Enlarged Photos)",
                 data=pdf_bytes,
                 file_name=f"Lap_Report_{disp_rep_no}.pdf",
                 mime="application/pdf",
