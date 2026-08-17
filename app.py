@@ -543,10 +543,10 @@ with col_rem:
 st.markdown("<br>", unsafe_allow_html=True)
 
 # ==========================================
-# 5. HIGH-END EXECUTIVE PDF GENERATION
+# 5. HIGH-END EXECUTIVE PDF GENERATION (LARGER FONTS)
 # ==========================================
 if st.button("📄 Generate Executive PDF Report & Sync", type="primary", use_container_width=True):
-    with st.spinner("Generating High-End Executive PDF Report..."):
+    with st.spinner("Generating PDF Report with Larger & Clearer Fonts..."):
         buffer = io.BytesIO()
         
         # Professional Margins
@@ -567,17 +567,17 @@ if st.button("📄 Generate Executive PDF Report & Sync", type="primary", use_co
         LIGHT_BG = colors.HexColor("#F8FAFC")
         BORDER_GRAY = colors.HexColor("#E2E8F0")
 
-        # Custom Executive Typography
-        title_style = ParagraphStyle('DocTitle', parent=styles['Heading1'], fontSize=11, leading=13, textColor=PRIMARY_NAVY, fontName="Helvetica-Bold")
-        sub_style = ParagraphStyle('DocSub', parent=styles['Normal'], fontSize=7.5, leading=9.5, textColor=colors.HexColor("#64748B"))
-        meta_label = ParagraphStyle('MetaLabel', parent=styles['Normal'], fontSize=7.5, leading=9.5, textColor=PRIMARY_NAVY, fontName="Helvetica-Bold")
-        meta_val = ParagraphStyle('MetaVal', parent=styles['Normal'], fontSize=7.5, leading=9.5, textColor=SECONDARY_SLATE)
-        cell_style = ParagraphStyle('TableCell', parent=styles['Normal'], fontSize=7.5, leading=10, textColor=SECONDARY_SLATE)
+        # 🔍 ENHANCED LARGER TYPOGRAPHY STYLES
+        title_style = ParagraphStyle('DocTitle', parent=styles['Heading1'], fontSize=12.5, leading=15, textColor=PRIMARY_NAVY, fontName="Helvetica-Bold")
+        sub_style = ParagraphStyle('DocSub', parent=styles['Normal'], fontSize=8.5, leading=11, textColor=colors.HexColor("#64748B"))
+        meta_label = ParagraphStyle('MetaLabel', parent=styles['Normal'], fontSize=8.5, leading=11, textColor=PRIMARY_NAVY, fontName="Helvetica-Bold")
+        meta_val = ParagraphStyle('MetaVal', parent=styles['Normal'], fontSize=8.5, leading=11, textColor=SECONDARY_SLATE)
+        cell_style = ParagraphStyle('TableCell', parent=styles['Normal'], fontSize=8.5, leading=11.5, textColor=SECONDARY_SLATE)
         cell_center = ParagraphStyle('TableCellCenter', parent=cell_style, alignment=1)
-        th_style = ParagraphStyle('TH', parent=cell_style, fontSize=7, leading=9, textColor=colors.white, fontName="Helvetica-Bold", alignment=1)
+        th_style = ParagraphStyle('TH', parent=cell_style, fontSize=8.0, leading=10, textColor=colors.white, fontName="Helvetica-Bold", alignment=1)
 
         # 1. Header Section
-        logo_img = RLImage("bmi_logo.png", width=70, height=30) if os.path.exists("bmi_logo.png") else Paragraph("<b>BIOMED</b>", title_style)
+        logo_img = RLImage("bmi_logo.png", width=75, height=32) if os.path.exists("bmi_logo.png") else Paragraph("<b>BIOMED</b>", title_style)
         
         comp_details = [
             Paragraph("BIOMED INTERNATIONAL (PVT) LTD", title_style),
@@ -614,12 +614,12 @@ if st.button("📄 Generate Executive PDF Report & Sync", type="primary", use_co
             ('BOX', (0,0), (-1,-1), 0.5, BORDER_GRAY),
             ('INNERGRID', (0,0), (-1,-1), 0.5, BORDER_GRAY),
             ('VALIGN', (0,0), (-1,-1), 'MIDDLE'),
-            ('PADDING', (0,0), (-1,-1), 4),
+            ('PADDING', (0,0), (-1,-1), 5),
         ]))
         story.append(t_meta)
         story.append(Spacer(1, 10))
 
-        # 3. Main Instruments Table (With High Details Photo Rendering)
+        # 3. Main Instruments Table (With Larger Text)
         table_data = [[
             Paragraph("#", th_style),
             Paragraph("INSPECTION PHOTO", th_style),
@@ -639,7 +639,6 @@ if st.button("📄 Generate Executive PDF Report & Sync", type="primary", use_co
                 p_img = process_and_compress_image(item["image"], max_size=(1000, 1000))
                 p_img.save(t_path, "JPEG", quality=95)
                 
-                # Enhanced High-Res Photo Embedded Frame
                 img_cell = RLImage(t_path, width=115, height=105)
                 temp_files.append(t_path)
 
@@ -665,10 +664,10 @@ if st.button("📄 Generate Executive PDF Report & Sync", type="primary", use_co
             ('BACKGROUND', (0,0), (-1,0), PRIMARY_NAVY),
             ('GRID', (0,0), (-1,-1), 0.5, BORDER_GRAY),
             ('VALIGN', (0,0), (-1,-1), 'MIDDLE'),
-            ('TOPPADDING', (0,0), (-1,-1), 4),
-            ('BOTTOMPADDING', (0,0), (-1,-1), 4),
-            ('LEFTPADDING', (0,0), (-1,-1), 3),
-            ('RIGHTPADDING', (0,0), (-1,-1), 3),
+            ('TOPPADDING', (0,0), (-1,-1), 5),
+            ('BOTTOMPADDING', (0,0), (-1,-1), 5),
+            ('LEFTPADDING', (0,0), (-1,-1), 4),
+            ('RIGHTPADDING', (0,0), (-1,-1), 4),
             ('ROWBACKGROUNDS', (0,1), (-1,-1), [colors.white, LIGHT_BG])
         ]))
         story.append(t_main)
@@ -686,8 +685,8 @@ if st.button("📄 Generate Executive PDF Report & Sync", type="primary", use_co
         story.append(Spacer(1, 15))
 
         # 5. Executive Signatures Box
-        sig_title_style = ParagraphStyle('SigTitle', parent=styles['Normal'], fontSize=8, leading=10, textColor=PRIMARY_NAVY, fontName="Helvetica-Bold")
-        sig_text_style = ParagraphStyle('SigText', parent=styles['Normal'], fontSize=7.5, leading=9.5, textColor=SECONDARY_SLATE)
+        sig_title_style = ParagraphStyle('SigTitle', parent=styles['Normal'], fontSize=8.5, leading=11, textColor=PRIMARY_NAVY, fontName="Helvetica-Bold")
+        sig_text_style = ParagraphStyle('SigText', parent=styles['Normal'], fontSize=8.0, leading=10, textColor=SECONDARY_SLATE)
 
         sig_data = [
             [Paragraph("<b>Inspected & Prepared By:</b>", sig_title_style), Paragraph("<b>Customer Acknowledgment / Hospital Stamp:</b>", sig_title_style)],
@@ -728,7 +727,7 @@ if st.button("📄 Generate Executive PDF Report & Sync", type="primary", use_co
         
         synced = sync_to_google_sheet(summary_payload)
 
-        st.success("✅ High-End Executive PDF Report Successfully Generated!")
+        st.success("✅ Large Font Executive PDF Generated Successfully!")
 
         st.download_button(
             "📥 Download Executive PDF Report",
