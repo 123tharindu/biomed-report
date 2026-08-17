@@ -1,5 +1,3 @@
-imgbb එකේ direct image URL එක broken නිසා dynamic image fallback එකක් සහ Base64 SVG Icon එකක් සකස් කරලා සම්පූර්ණ Code එක update කළා. දැන් image එක load වුණේ නැතත් broken icon එකක් පෙන්නන්නේ නැහැ, ලස්සනට Medical Header Logo එකක් Display වෙනවා.
-මෙන්න සම්පූර්ණ Code එක:
 import base64
 import datetime
 import io
@@ -894,4 +892,3 @@ if st.button(
                 mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
                 use_container_width=True,
             )
-
