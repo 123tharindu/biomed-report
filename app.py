@@ -22,17 +22,18 @@ from reportlab.platypus import (
     Spacer,
     Table,
     TableStyle,
+    HRFlowable,
 )
 import streamlit as st
 
 # ==========================================
-# 1. PAGE CONFIGURATION & MOBILE CSS
+# 1. PAGE CONFIGURATION & EXECUTIVE CSS
 # ==========================================
 st.set_page_config(
     page_title="Biomed International - AI Lap Scan Portal",
     page_icon="🏥",
     layout="wide",
-    initial_sidebar_state="collapsed",
+    initial_sidebar_state="expanded",
 )
 
 def get_local_logo_base64(file_path="bmi_logo.png"):
@@ -43,120 +44,123 @@ def get_local_logo_base64(file_path="bmi_logo.png"):
                 return f"data:image/png;base64,{encoded}"
         except Exception:
             pass
-    return "https://via.placeholder.com/100x50.png?text=BMI+Logo"
+    return "https://via.placeholder.com/120x60.png?text=BMI+Logo"
 
 LOGO_SRC = get_local_logo_base64("bmi_logo.png")
 
 if os.path.exists("bmi_logo.png"):
     st.logo("bmi_logo.png", icon_image="bmi_logo.png")
 
-# Mobile Optimization & Fixed Dropdown CSS
+# Executive UI Styling
 st.markdown(
     """
 <style>
-    /* Responsive Global Container */
+    @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
+    
+    html, body, [class*="css"] {
+        font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+    }
+
     .main .block-container {
-        padding-top: 1rem !important;
-        padding-bottom: 2rem !important;
-        padding-left: 0.8rem !important;
-        padding-right: 0.8rem !important;
+        padding-top: 1.5rem !important;
+        padding-bottom: 3rem !important;
+        max-width: 1200px;
     }
     
-    .main { background-color: #F8FAFC; font-family: 'Inter', sans-serif; }
-    
-    /* Mobile Dropdown / SelectBox UI Fix for On-Screen Keyboard */
+    .main { 
+        background-color: #F8FAFC; 
+    }
+
+    /* Fixed Selectbox Popover for Mobile */
     div[data-baseweb="popover"] {
-        max-height: 220px !important;
+        max-height: 250px !important;
         z-index: 999999 !important;
     }
     div[data-baseweb="popover"] > div {
-        max-height: 220px !important;
+        max-height: 250px !important;
         overflow-y: auto !important;
-        -webkit-overflow-scrolling: touch !important;
     }
-    div[role="listbox"] {
-        max-height: 200px !important;
-    }
-    
-    /* Responsive Header Area */
+
+    /* Header Banner */
     .brand-header {
-        background: linear-gradient(135deg, #0D2A4A 0%, #1E3A8A 100%);
-        padding: 14px 16px; 
-        border-radius: 12px; 
+        background: linear-gradient(135deg, #0F172A 0%, #1E293B 50%, #1E3A8A 100%);
+        padding: 20px 24px; 
+        border-radius: 16px; 
         color: white;
-        box-shadow: 0 4px 15px rgba(13, 42, 74, 0.15); 
-        margin-bottom: 15px;
+        box-shadow: 0 10px 25px -5px rgba(15, 23, 42, 0.25); 
+        margin-bottom: 24px;
+        border: 1px solid rgba(255, 255, 255, 0.1);
     }
     .brand-header h1 { 
         color: #FFFFFF !important; 
-        font-size: 16px !important; 
+        font-size: 20px !important; 
         font-weight: 800 !important; 
         margin: 0 !important; 
-        line-height: 1.3; 
+        letter-spacing: -0.5px;
     }
     .brand-header p { 
-        color: #93C5FD !important; 
-        font-size: 10px !important; 
-        margin-top: 3px !important; 
+        color: #94A3B8 !important; 
+        font-size: 11px !important; 
+        margin-top: 4px !important; 
         font-weight: 600; 
+        letter-spacing: 0.5px;
+        text-transform: uppercase;
     }
     .status-badge {
-        background-color: rgba(255, 255, 255, 0.15); 
-        color: #FFFFFF;
-        padding: 4px 8px; 
-        border-radius: 6px; 
-        font-size: 10px;
-        font-weight: 600; 
-        display: inline-block;
-        margin-bottom: 8px;
-    }
-    .header-logo-box {
-        background-color: #FFFFFF;
-        padding: 4px 8px;
-        border-radius: 8px;
+        background: rgba(34, 197, 94, 0.15); 
+        color: #4ADE80;
+        border: 1px solid rgba(74, 222, 128, 0.3);
+        padding: 4px 10px; 
+        border-radius: 20px; 
+        font-size: 11px;
+        font-weight: 700; 
         display: inline-flex;
         align-items: center;
-        justify-content: center;
-        height: 40px;
+        gap: 6px;
     }
-    .header-logo-box img {
-        max-height: 32px;
-        max-width: 80px;
-        object-fit: contain;
-    }
-    
-    /* Mobile Touch-Friendly Instrument Cards */
+
+    /* Professional Card UI */
     .instrument-card {
-        background-color: #FFFFFF; 
+        background: #FFFFFF; 
         border: 1px solid #E2E8F0;
-        border-radius: 12px; 
-        padding: 12px; 
-        margin-bottom: 15px;
-        box-shadow: 0 2px 6px rgba(0, 0, 0, 0.03);
+        border-radius: 14px; 
+        padding: 20px; 
+        margin-bottom: 20px;
+        box-shadow: 0 4px 12px -2px rgba(0, 0, 0, 0.03);
+        transition: all 0.2s ease;
     }
-    .section-title { 
-        font-size: 15px; 
-        font-weight: 700; 
-        color: #0D2A4A; 
-        border-bottom: 2px solid #E2E8F0; 
-        padding-bottom: 6px; 
-        margin-bottom: 12px; 
+    .instrument-card:hover {
+        border-color: #CBD5E1;
+        box-shadow: 0 8px 16px -4px rgba(0, 0, 0, 0.06);
     }
     
-    /* Mobile Large Touch Buttons */
+    .section-title { 
+        font-size: 16px; 
+        font-weight: 800; 
+        color: #0F172A; 
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        border-bottom: 2px solid #E2E8F0; 
+        padding-bottom: 10px; 
+        margin-bottom: 16px; 
+    }
+
+    /* Streamlit Buttons Enhancement */
     .stButton>button {
-        width: 100% !important;
-        border-radius: 8px !important;
-        min-height: 45px !important;
-        font-size: 14px !important;
-        font-weight: 600 !important;
+        border-radius: 10px !important;
+        font-weight: 700 !important;
+        transition: all 0.2s ease !important;
     }
     .stButton>button[kind="primary"] {
-        background: linear-gradient(135deg, #0D2A4A 0%, #1E3A8A 100%) !important;
+        background: linear-gradient(135deg, #1E3A8A 0%, #0F172A 100%) !important;
         color: white !important; 
         border: none !important;
-        min-height: 50px !important;
-        font-size: 15px !important;
+        box-shadow: 0 4px 12px rgba(30, 58, 138, 0.25) !important;
+    }
+    .stButton>button[kind="primary"]:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 6px 16px rgba(30, 58, 138, 0.35) !important;
     }
 </style>
 """,
@@ -164,71 +168,57 @@ st.markdown(
 )
 
 # ==========================================
-# 2. GEMINI CLIENT SETUP & DATA LISTS
+# 2. DATA LISTS & CATALOG SETUP
 # ==========================================
 GEMINI_API_KEY = st.secrets.get("GEMINI_API_KEY", os.environ.get("GEMINI_API_KEY", ""))
 client = genai.Client(api_key=GEMINI_API_KEY) if GEMINI_API_KEY else None
 
 SL_HOSPITALS = [
     "-- Select Hospital / Institute --",
-    "District General Hospital Hambantota",
-    "Base Hospital Tangalle",
-    "District General Hospital Matara",
-    "Base Hospital Kamburupitiya",
-    "National Hospital Galle (Karapitiya)",
-    "Galle Mediclinic / Cardicare",
-    "Ruhunu Hospital Galle",
-    "Base Hospital Elpitiya",
-    "Base Hospital Balapitiya",
-    "Asiri Hospital Galle",
-    "Teaching Hospital Kalutara",
-    "Philip Hospital Kalutara",
-    "Kethumathi Maternity Hospital Kalutara",
-    "Colombo South Teaching Hospital (Kalubowila)",
     "National Hospital of Sri Lanka (NHSL Colombo)",
-    "National Eye Hospital Colombo",
-    "Lady Ridgeway Hospital for Children (LRH)",
+    "National Hospital Kandy",
+    "National Hospital Galle (Karapitiya)",
+    "Colombo South Teaching Hospital (Kalubowila)",
+    "Colombo North Teaching Hospital (Ragama)",
     "Sri Jayewardenepura General Hospital (SJGH)",
-    "Nawaloka Hospital Colombo",
-    "Lanka Hospitals Colombo",
-    "Asiri Central Hospital",
+    "Lady Ridgeway Hospital for Children (LRH)",
+    "Apeksha Hospital Maharagama",
     "Castle Street Hospital for Women",
     "De Soysa Hospital for Women (DMH)",
-    "Apeksha Hospital Maharagama",
-    "Colombo Army Hospital",
-    "Durdans Hospital Colombo",
-    "General Sir John Kotelawala Defence University Hospital (KDU)",
-    "Wish Fertility & Women's Hospital",
-    "Asiri Surgical Hospital",
-    "Kings Hospital Colombo",
-    "District General Hospital Gampaha",
-    "Colombo North Teaching Hospital (Ragama)",
-    "Sri Lanka Navy General Hospital Welisara",
+    "District General Hospital Hambantota",
+    "District General Hospital Matara",
     "District General Hospital Chilaw",
-    "Base Hospital Puttalam",
-    "Teaching Hospital Kuliyapitiya",
-    "Teaching Hospital Kurunegala",
-    "Kurunegala Co-operative Hospital",
-    "Base Hospital Dambadeniya",
-    "Base Hospital Rikillagaskada",
-    "National Hospital Kandy",
-    "Asiri Hospital Kandy",
-    "Teaching Hospital Peradeniya",
-    "Sirimavo Bandaranaike Specialized Children's Hospital",
-    "District General Hospital Matale",
-    "Base Hospital Dambulla",
-    "Teaching Hospital Badulla",
-    "Teaching Hospital Anuradhapura",
+    "District General Hospital Gampaha",
     "District General Hospital Polonnaruwa",
-    "Teaching Hospital Ratnapura",
-    "Base Hospital Embilipitiya",
-    "Teaching Hospital Kegalle",
-    "Teaching Hospital Batticaloa",
-    "Base Hospital Valaichchenai",
+    "District General Hospital Matale",
     "District General Hospital Trincomalee",
-    "Base Hospital Akkaraipattu",
+    "Teaching Hospital Peradeniya",
+    "Teaching Hospital Kurunegala",
+    "Teaching Hospital Anuradhapura",
+    "Teaching Hospital Badulla",
+    "Teaching Hospital Ratnapura",
+    "Teaching Hospital Kalutara",
     "Teaching Hospital Jaffna",
-    "Holy Cross Hospital Jaffna",
+    "Teaching Hospital Batticaloa",
+    "Teaching Hospital Kuliyapitiya",
+    "Teaching Hospital Kegalle",
+    "Base Hospital Tangalle",
+    "Base Hospital Kamburupitiya",
+    "Base Hospital Elpitiya",
+    "Base Hospital Balapitiya",
+    "Base Hospital Puttalam",
+    "Base Hospital Dambulla",
+    "Base Hospital Embilipitiya",
+    "General Sir John Kotelawala Defence University Hospital (KDU)",
+    "Colombo Army Hospital",
+    "Sri Lanka Navy General Hospital Welisara",
+    "Asiri Surgical Hospital",
+    "Asiri Central Hospital",
+    "Nawaloka Hospital Colombo",
+    "Lanka Hospitals Colombo",
+    "Durdans Hospital Colombo",
+    "Kings Hospital Colombo",
+    "Ruhunu Hospital Galle",
     "Northern Central Hospital Jaffna",
     "Other (Type manually)"
 ]
@@ -260,8 +250,8 @@ def load_catalog(file_path):
             art_col, desc_col = df.columns[0], df.columns[1] if len(df.columns) > 1 else df.columns[0]
             df = df.dropna(subset=[art_col])
             return dict(zip(df[art_col].astype(str).str.strip(), df[desc_col].astype(str).str.strip()))
-        except Exception as e:
-            st.warning(f"Excel reading note: {e}")
+        except Exception:
+            pass
             
     return {
         "BB365R": "Scissors Curved 17mm",
@@ -273,27 +263,25 @@ def load_catalog(file_path):
 catalog_dict = load_catalog(EXCEL_FILE)
 article_options = sorted(list(catalog_dict.keys()))
 
-# 📸 Enhanced Image Processing Function (Enhances Photo Details & Sharpness)
-def process_and_compress_image(image_file, max_size=(1000, 1000)):
+# 📸 Image Detail & Contrast Processing
+def process_and_compress_image(image_file, max_size=(1200, 1200)):
     img = Image.open(image_file)
     img = ImageOps.exif_transpose(img)
     
-    # 1. Image Resize for optimal memory and detail
     img.thumbnail(max_size, Image.Resampling.LANCZOS)
     
-    # Convert to RGB if PNG/RGBA
     if img.mode in ("RGBA", "P"):
         img = img.convert("RGB")
         
-    # 2. Enhance Contrast (Details stand out better)
+    # Contrast Enhancement
     enhancer = ImageEnhance.Contrast(img)
     img = enhancer.enhance(1.25)
     
-    # 3. Enhance Sharpness (Micro-cracks, wear & tears become clearer)
+    # Sharpness Enhancement
     enhancer = ImageEnhance.Sharpness(img)
-    img = enhancer.enhance(1.4)
+    img = enhancer.enhance(1.45)
     
-    # 4. Enhance Brightness slightly for phone photos
+    # Slight Brightness Balancing
     enhancer = ImageEnhance.Brightness(img)
     img = enhancer.enhance(1.05)
     
@@ -346,8 +334,7 @@ def sync_to_google_sheet(summary_data):
         ]
         sheet.append_row(row)
         return True
-    except Exception as e:
-        st.warning(f"Google Sheet Sync Note: {e}")
+    except Exception:
         return False
 
 def generate_professional_excel(instruments_data, hospital_name, engineer_name, report_no, date_str):
@@ -356,16 +343,16 @@ def generate_professional_excel(instruments_data, hospital_name, engineer_name, 
     ws.title = "Inspection Summary"
     ws.views.sheetView[0].showGridLines = True
 
-    NAVY_HEADER = "0D2A4A"
-    ICE_BLUE = "F0F4F8"
+    NAVY_HEADER = "0F172A"
+    ICE_BLUE = "F8FAFC"
     WHITE = "FFFFFF"
-    BORDER_COLOR = "CBD5E1"
-    TEXT_MAIN = "0F172A"
+    BORDER_COLOR = "E2E8F0"
+    TEXT_MAIN = "1E293B"
 
-    font_title = Font(name="Arial", size=13, bold=True, color="FFFFFF")
-    font_header = Font(name="Arial", size=10, bold=True, color="FFFFFF")
-    font_data = Font(name="Arial", size=9, color=TEXT_MAIN)
-    font_bold = Font(name="Arial", size=9, bold=True, color=TEXT_MAIN)
+    font_title = Font(name="Segoe UI", size=12, bold=True, color="FFFFFF")
+    font_header = Font(name="Segoe UI", size=9, bold=True, color="FFFFFF")
+    font_data = Font(name="Segoe UI", size=9, color=TEXT_MAIN)
+    font_bold = Font(name="Segoe UI", size=9, bold=True, color=TEXT_MAIN)
 
     fill_navy = PatternFill(start_color=NAVY_HEADER, end_color=NAVY_HEADER, fill_type="solid")
     fill_zebra = PatternFill(start_color=ICE_BLUE, end_color=ICE_BLUE, fill_type="solid")
@@ -382,7 +369,7 @@ def generate_professional_excel(instruments_data, hospital_name, engineer_name, 
     ws["A1"].font = font_title
     ws["A1"].fill = fill_navy
     ws["A1"].alignment = align_center
-    ws.row_dimensions[1].height = 28
+    ws.row_dimensions[1].height = 30
 
     meta_info = [
         ("Customer / Hospital:", hospital_name, "Inspection Date:", date_str),
@@ -415,7 +402,7 @@ def generate_professional_excel(instruments_data, hospital_name, engineer_name, 
         
         rec = item.get("recommendation", "Service")
         status_text = "ACTION REQ." if rec == "Replace" else "PASSED / OK"
-        rec_font = Font(name="Arial", size=9, bold=True, color="B91C1C" if rec == "Replace" else "15803D")
+        rec_font = Font(name="Segoe UI", size=9, bold=True, color="DC2626" if rec == "Replace" else "16A34A")
 
         row_data = [
             (idx + 1, align_center, font_data),
@@ -456,20 +443,23 @@ def update_desc_callback(idx):
 # ==========================================
 st.markdown(f"""
     <div class="brand-header">
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
-            <div class="header-logo-box">
-                <img src="{LOGO_SRC}" alt="Biomed Logo" />
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+            <div style="background: white; padding: 6px 12px; border-radius: 8px; display: inline-flex; align-items: center;">
+                <img src="{LOGO_SRC}" alt="Biomed Logo" style="height: 28px; max-width: 100px; object-fit: contain;" />
             </div>
-            <div class="status-badge">🟢 Active</div>
+            <div class="status-badge">
+                <span style="width: 8px; height: 8px; background-color: #4ADE80; border-radius: 50%; display: inline-block;"></span>
+                SYSTEM ACTIVE
+            </div>
         </div>
         <div>
             <h1>BIOMED INTERNATIONAL (PVT) LTD</h1>
-            <p>AESCULAP DIVISION — AI LAP SCAN PORTAL</p>
+            <p>AESCULAP DIVISION — EXECUTIVE TECHNICAL INSPECTION PORTAL</p>
         </div>
     </div>
 """, unsafe_allow_html=True)
 
-st.sidebar.markdown("### 📋 Meta Information")
+st.sidebar.markdown("### 📋 Inspection Context")
 hospital_sel = st.sidebar.selectbox("Customer / Hospital", options=SL_HOSPITALS)
 if hospital_sel == "Other (Type manually)":
     hospital_name = st.sidebar.text_input("Enter Hospital Name Manually")
@@ -482,158 +472,160 @@ date_val = st.sidebar.date_input("Inspection Date", value=datetime.date.today())
 engineer_val = st.sidebar.text_input("Engineer / Inspector Name")
 report_no_val = st.sidebar.text_input("Report Reference No.")
 dept_val = st.sidebar.text_input("Department", value="Theatre / Laparoscopy")
-remarks_val = st.sidebar.text_area("General Remarks & Inspection Notes", value="All above instruments require official inspection and technical servicing.", height=80)
+remarks_val = st.sidebar.text_area("General Remarks & Inspection Notes", value="All above instruments require official technical evaluation and preventive maintenance as detailed.", height=90)
 
-st.markdown("<div class='section-title'>🔬 Surgical Instruments Entry</div>", unsafe_allow_html=True)
+st.markdown("<div class='section-title'>🔬 Surgical Instruments Register</div>", unsafe_allow_html=True)
 
 instruments_data = []
 
 # ==========================================
-# 4. INSTRUMENTS INPUT LOOP (MOBILE FRIENDLY)
+# 4. INSTRUMENTS INPUT LOOP
 # ==========================================
 for i in range(st.session_state.num_instruments):
     st.markdown(f"<div class='instrument-card'><b>🔪 Instrument Entry #{i+1}</b>", unsafe_allow_html=True)
     
     inst_item = {}
-    inst_item["image"] = st.file_uploader(f"📷 Upload Image / Take Photo #{i+1}", type=["jpg", "png", "jpeg"], key=f"uploader_{i}")
-    if inst_item["image"]:
-        # Preview processed enhanced image
-        enhanced_preview = process_and_compress_image(inst_item["image"])
-        st.image(enhanced_preview, caption="✨ Enhanced Photo Preview", use_container_width=True)
+    
+    col_img, col_info = st.columns([1, 2])
+    
+    with col_img:
+        inst_item["image"] = st.file_uploader(f"📷 Photo #{i+1}", type=["jpg", "png", "jpeg"], key=f"uploader_{i}")
+        if inst_item["image"]:
+            enhanced_preview = process_and_compress_image(inst_item["image"])
+            st.image(enhanced_preview, caption="✨ Detail Enhanced Preview", use_container_width=True)
             
-    is_custom = st.checkbox("✍️ Custom Article No", key=f"custom_chk_{i}")
-    if is_custom:
-        art_no = st.text_input(f"Enter Article No #{i+1}", key=f"c_art_{i}")
-        inst_name = st.text_input(f"Instrument Description #{i+1}", key=f"name_{i}")
-    else:
-        art_no = st.selectbox(f"Search Master Catalog #{i+1}", options=[""] + article_options, key=f"s_art_{i}", on_change=update_desc_callback, args=(i,))
-        inst_name = st.text_input(f"Instrument Description #{i+1}", key=f"name_{i}")
+    with col_info:
+        is_custom = st.checkbox("✍️ Custom Article No", key=f"custom_chk_{i}")
+        if is_custom:
+            art_no = st.text_input(f"Article No #{i+1}", key=f"c_art_{i}")
+            inst_name = st.text_input(f"Instrument Description #{i+1}", key=f"name_{i}")
+        else:
+            art_no = st.selectbox(f"Search Master Catalog #{i+1}", options=[""] + article_options, key=f"s_art_{i}", on_change=update_desc_callback, args=(i,))
+            inst_name = st.text_input(f"Instrument Description #{i+1}", key=f"name_{i}")
+            
+        inst_item["art_no"] = art_no
+        inst_item["name"] = inst_name
         
-    inst_item["art_no"] = art_no
-    inst_item["name"] = inst_name
-    
-    if inst_item["image"] and GEMINI_API_KEY:
-        if st.button(f"✨ AI Auto-Detect Damage #{i+1}", key=f"ai_btn_{i}"):
-            with st.spinner("Analyzing with Gemini AI..."):
-                ai_dam, ai_rec = analyze_damage_with_ai(inst_item["image"], inst_item["name"])
-                st.session_state[f"dam_{i}"] = ai_dam
-                st.session_state[f"rec_{i}"] = ai_rec
-                st.rerun()
+        if inst_item["image"] and GEMINI_API_KEY:
+            if st.button(f"✨ AI Auto-Detect Damage #{i+1}", key=f"ai_btn_{i}"):
+                with st.spinner("Analyzing with AI..."):
+                    ai_dam, ai_rec = analyze_damage_with_ai(inst_item["image"], inst_item["name"])
+                    st.session_state[f"dam_{i}"] = ai_dam
+                    st.session_state[f"rec_{i}"] = ai_rec
+                    st.rerun()
 
-    selected_preset = st.selectbox(f"💡 Technical Fault Presets #{i+1}", options=DAMAGE_SUGGESTIONS, key=f"preset_{i}")
-    
-    if selected_preset and not selected_preset.startswith("--"):
-        curr = st.session_state.get(f"dam_{i}", "")
-        if selected_preset not in curr:
-            st.session_state[f"dam_{i}"] = f"{curr}\n{selected_preset}".strip() if curr else selected_preset
+        selected_preset = st.selectbox(f"💡 Technical Fault Presets #{i+1}", options=DAMAGE_SUGGESTIONS, key=f"preset_{i}")
+        
+        if selected_preset and not selected_preset.startswith("--"):
+            curr = st.session_state.get(f"dam_{i}", "")
+            if selected_preset not in curr:
+                st.session_state[f"dam_{i}"] = f"{curr}\n{selected_preset}".strip() if curr else selected_preset
 
-    inst_item["damage"] = st.text_area(f"Damage Details #{i+1}", key=f"dam_{i}", height=70)
-    
-    rec_opts = ["Replace", "Service", "Repair", "Upgrade / New System Required", "OK"]
-    inst_item["recommendation"] = st.selectbox(f"Recommendation #{i+1}", options=rec_opts, key=f"rec_{i}")
+        inst_item["damage"] = st.text_area(f"Damage Details #{i+1}", key=f"dam_{i}", height=70)
+        
+        rec_opts = ["Replace", "Service", "Repair", "Upgrade / New System Required", "OK"]
+        inst_item["recommendation"] = st.selectbox(f"Recommendation #{i+1}", options=rec_opts, key=f"rec_{i}")
         
     instruments_data.append(inst_item)
     st.markdown("</div>", unsafe_allow_html=True)
 
 col_add, col_rem = st.columns(2)
 with col_add:
-    if st.button("➕ Add Item"):
+    if st.button("➕ Add Another Instrument"):
         st.session_state.num_instruments += 1
         st.rerun()
 with col_rem:
     if st.session_state.num_instruments > 1:
-        if st.button("🗑️ Remove Last"):
+        if st.button("🗑️ Remove Last Instrument"):
             st.session_state.num_instruments -= 1
             st.rerun()
 
 st.markdown("<br>", unsafe_allow_html=True)
 
 # ==========================================
-# 5. GENERATE PDF & GOOGLE SHEET SYNC
+# 5. HIGH-END EXECUTIVE PDF GENERATION
 # ==========================================
-if st.button("📄 Generate PDF Report & Sync Summary", type="primary", use_container_width=True):
-    with st.spinner("Generating PDF Report..."):
+if st.button("📄 Generate Executive PDF Report & Sync", type="primary", use_container_width=True):
+    with st.spinner("Generating High-End Executive PDF Report..."):
         buffer = io.BytesIO()
         
+        # Professional Margins
         doc = SimpleDocTemplate(
             buffer,
             pagesize=A4,
-            rightMargin=15,
-            leftMargin=15,
-            topMargin=10,
-            bottomMargin=10
+            rightMargin=20,
+            leftMargin=20,
+            topMargin=20,
+            bottomMargin=20
         )
         story, styles = [], getSampleStyleSheet()
         temp_files = []
 
-        navy_primary = colors.HexColor("#0D2A4A")
-        ice_blue_bg = colors.HexColor("#F0F4F8")
-        border_navy = colors.HexColor("#BAC7D5")
+        # High-End Corporate Palette
+        PRIMARY_NAVY = colors.HexColor("#0F172A")
+        SECONDARY_SLATE = colors.HexColor("#334155")
+        LIGHT_BG = colors.HexColor("#F8FAFC")
+        BORDER_GRAY = colors.HexColor("#E2E8F0")
 
-        company_name_style = ParagraphStyle('CompName', parent=styles['Heading1'], fontSize=10.5, leading=12, textColor=navy_primary, fontName="Helvetica-Bold")
-        company_sub_style = ParagraphStyle('CompSub', parent=styles['Normal'], fontSize=7, leading=9, textColor=colors.HexColor("#475569"))
-        label_style = ParagraphStyle('LabelNavy', parent=styles['Normal'], fontSize=7.5, leading=9.5, textColor=navy_primary, fontName="Helvetica-Bold")
-        value_style = ParagraphStyle('ValueText', parent=styles['Normal'], fontSize=7.5, leading=9.5, textColor=colors.HexColor("#1F2937"))
-        cell_style = ParagraphStyle('TableCell', parent=styles['Normal'], fontSize=7.5, leading=9.5)
+        # Custom Executive Typography
+        title_style = ParagraphStyle('DocTitle', parent=styles['Heading1'], fontSize=11, leading=13, textColor=PRIMARY_NAVY, fontName="Helvetica-Bold")
+        sub_style = ParagraphStyle('DocSub', parent=styles['Normal'], fontSize=7.5, leading=9.5, textColor=colors.HexColor("#64748B"))
+        meta_label = ParagraphStyle('MetaLabel', parent=styles['Normal'], fontSize=7.5, leading=9.5, textColor=PRIMARY_NAVY, fontName="Helvetica-Bold")
+        meta_val = ParagraphStyle('MetaVal', parent=styles['Normal'], fontSize=7.5, leading=9.5, textColor=SECONDARY_SLATE)
+        cell_style = ParagraphStyle('TableCell', parent=styles['Normal'], fontSize=7.5, leading=10, textColor=SECONDARY_SLATE)
         cell_center = ParagraphStyle('TableCellCenter', parent=cell_style, alignment=1)
         th_style = ParagraphStyle('TH', parent=cell_style, fontSize=7, leading=9, textColor=colors.white, fontName="Helvetica-Bold", alignment=1)
 
-        # PDF Header Box
-        company_info = [
-            Paragraph("BIOMED INTERNATIONAL (PVT) LTD", company_name_style),
-            Paragraph("AESCULAP Division | Colombo 03, Sri Lanka", company_sub_style)
-        ]
-        logo_img = RLImage("bmi_logo.png", width=60, height=28) if os.path.exists("bmi_logo.png") else Paragraph("<b>BMI</b>", company_name_style)
-
-        t_header = Table([[
-            logo_img,
-            company_info,
-            [Paragraph("TECHNICAL INSPECTION REPORT", ParagraphStyle('T', parent=company_name_style, alignment=2)),
-             Paragraph("LAP SCAN DIAGNOSTICS", ParagraphStyle('S', parent=company_sub_style, alignment=2))]
-        ]], colWidths=[65, 290, 210])
+        # 1. Header Section
+        logo_img = RLImage("bmi_logo.png", width=70, height=30) if os.path.exists("bmi_logo.png") else Paragraph("<b>BIOMED</b>", title_style)
         
+        comp_details = [
+            Paragraph("BIOMED INTERNATIONAL (PVT) LTD", title_style),
+            Paragraph("AESCULAP DIVISION | Colombo 03, Sri Lanka", sub_style)
+        ]
+        
+        rep_title = [
+            Paragraph("TECHNICAL INSPECTION REPORT", ParagraphStyle('RTitle', parent=title_style, alignment=2)),
+            Paragraph("LAPAROSCOPY SYSTEM DIAGNOSTICS", ParagraphStyle('RSub', parent=sub_style, alignment=2))
+        ]
+
+        t_header = Table([[logo_img, comp_details, rep_title]], colWidths=[80, 260, 215])
         t_header.setStyle(TableStyle([
-            ('BACKGROUND', (0,0), (-1,-1), ice_blue_bg),
-            ('BOX', (0,0), (-1,-1), 1, navy_primary),
             ('VALIGN', (0,0), (-1,-1), 'MIDDLE'),
-            ('TOPPADDING', (0,0), (-1,-1), 3),
-            ('BOTTOMPADDING', (0,0), (-1,-1), 3),
+            ('BOTTOMPADDING', (0,0), (-1,-1), 8),
         ]))
         story.append(t_header)
-        story.append(Spacer(1, 4))
+        story.append(HRFlowable(width="100%", thickness=1.5, color=PRIMARY_NAVY, spaceBefore=0, spaceAfter=8))
 
-        # PDF Metadata Box
+        # 2. Metadata Box
         disp_hospital = hospital_name if hospital_name else "N/A"
         disp_engineer = engineer_val.strip() if engineer_val.strip() else "Biomed Technical Team"
         disp_rep_no = report_no_val.strip() if report_no_val.strip() else "N/A"
         date_str = date_val.strftime("%d %B %Y")
 
         meta_data = [
-            [Paragraph("Customer / Hospital:", label_style), Paragraph(disp_hospital, value_style), Paragraph("Brand:", label_style), Paragraph("Aesculap", value_style)],
-            [Paragraph("Inspection Date:", label_style), Paragraph(date_str, value_style), Paragraph("System / Set:", label_style), Paragraph("Laparoscopy", value_style)],
-            [Paragraph("Engineer Name:", label_style), Paragraph(disp_engineer, value_style), Paragraph("Report No:", label_style), Paragraph(disp_rep_no, value_style)],
-            [Paragraph("Department:", label_style), Paragraph(dept_val, value_style), Paragraph("Scope S/N:", label_style), Paragraph("N/A", value_style)],
+            [Paragraph("Customer / Hospital:", meta_label), Paragraph(disp_hospital, meta_val), Paragraph("Brand / System:", meta_label), Paragraph("Aesculap Laparoscopy", meta_val)],
+            [Paragraph("Inspection Date:", meta_label), Paragraph(date_str, meta_val), Paragraph("Department:", meta_label), Paragraph(dept_val, meta_val)],
+            [Paragraph("Engineer Name:", meta_label), Paragraph(disp_engineer, meta_val), Paragraph("Report Ref No:", meta_label), Paragraph(disp_rep_no, meta_val)],
         ]
-        t_meta = Table(meta_data, colWidths=[100, 182, 100, 183])
+        t_meta = Table(meta_data, colWidths=[95, 182, 95, 183])
         t_meta.setStyle(TableStyle([
-            ('BOX', (0,0), (-1,-1), 1, border_navy),
-            ('INNERGRID', (0,0), (-1,-1), 0.5, border_navy),
+            ('BACKGROUND', (0,0), (-1,-1), LIGHT_BG),
+            ('BOX', (0,0), (-1,-1), 0.5, BORDER_GRAY),
+            ('INNERGRID', (0,0), (-1,-1), 0.5, BORDER_GRAY),
             ('VALIGN', (0,0), (-1,-1), 'MIDDLE'),
-            ('TOPPADDING', (0,0), (-1,-1), 1.5),
-            ('BOTTOMPADDING', (0,0), (-1,-1), 1.5),
-            ('LEFTPADDING', (0,0), (-1,-1), 4),
-            ('RIGHTPADDING', (0,0), (-1,-1), 4),
+            ('PADDING', (0,0), (-1,-1), 4),
         ]))
         story.append(t_meta)
-        story.append(Spacer(1, 4))
+        story.append(Spacer(1, 10))
 
-        # PDF Instruments Table - High Quality Auto-Enhanced Image Embedded
+        # 3. Main Instruments Table (With High Details Photo Rendering)
         table_data = [[
             Paragraph("#", th_style),
             Paragraph("INSPECTION PHOTO", th_style),
             Paragraph("ARTICLE NO", th_style),
             Paragraph("INSTRUMENT NAME", th_style),
-            Paragraph("DETAILS OF DAMAGE", th_style),
+            Paragraph("DETAILS OF DAMAGE / DEFECT", th_style),
             Paragraph("RECOMMENDATION", th_style)
         ]]
 
@@ -647,12 +639,14 @@ if st.button("📄 Generate PDF Report & Sync Summary", type="primary", use_cont
                 p_img = process_and_compress_image(item["image"], max_size=(1000, 1000))
                 p_img.save(t_path, "JPEG", quality=95)
                 
-                # Large Enhanced Photo Dimensions in PDF
-                img_cell = RLImage(t_path, width=120, height=110)
+                # Enhanced High-Res Photo Embedded Frame
+                img_cell = RLImage(t_path, width=115, height=105)
                 temp_files.append(t_path)
 
-            rec_color = "#C0392B" if item["recommendation"] == "Replace" else ("#D35400" if item["recommendation"] in ["Service", "Repair"] else "#27AE60")
-            if item["recommendation"] == "Replace":
+            rec_text = item["recommendation"]
+            rec_color = "#DC2626" if rec_text == "Replace" else ("#D97706" if rec_text in ["Service", "Repair"] else "#16A34A")
+            
+            if rec_text == "Replace":
                 replace_count += 1
             else:
                 service_count += 1
@@ -660,59 +654,60 @@ if st.button("📄 Generate PDF Report & Sync Summary", type="primary", use_cont
             table_data.append([
                 Paragraph(str(idx + 1), cell_center),
                 img_cell,
-                Paragraph(f"<b>{item['art_no']}</b>", cell_style),
-                Paragraph(item["name"], cell_style),
+                Paragraph(f"<b>{item['art_no']}</b>", cell_center),
+                Paragraph(f"<b>{item['name']}</b>", cell_style),
                 Paragraph(item["damage"].replace("\n", "<br/>"), cell_style),
-                Paragraph(f"<b><font color='{rec_color}'>{item['recommendation'].upper()}</font></b>", cell_center)
+                Paragraph(f"<b><font color='{rec_color}'>{rec_text.upper()}</font></b>", cell_center)
             ])
 
-        t_main = Table(table_data, colWidths=[18, 128, 62, 105, 162, 90])
+        t_main = Table(table_data, colWidths=[18, 122, 65, 105, 155, 90])
         t_main.setStyle(TableStyle([
-            ('BACKGROUND', (0,0), (-1,0), navy_primary),
-            ('GRID', (0,0), (-1,-1), 0.5, border_navy),
+            ('BACKGROUND', (0,0), (-1,0), PRIMARY_NAVY),
+            ('GRID', (0,0), (-1,-1), 0.5, BORDER_GRAY),
             ('VALIGN', (0,0), (-1,-1), 'MIDDLE'),
-            ('TOPPADDING', (0,0), (-1,-1), 1),
-            ('BOTTOMPADDING', (0,0), (-1,-1), 1),
-            ('LEFTPADDING', (0,0), (-1,-1), 2),
-            ('RIGHTPADDING', (0,0), (-1,-1), 2),
+            ('TOPPADDING', (0,0), (-1,-1), 4),
+            ('BOTTOMPADDING', (0,0), (-1,-1), 4),
+            ('LEFTPADDING', (0,0), (-1,-1), 3),
+            ('RIGHTPADDING', (0,0), (-1,-1), 3),
+            ('ROWBACKGROUNDS', (0,1), (-1,-1), [colors.white, LIGHT_BG])
         ]))
         story.append(t_main)
-        story.append(Spacer(1, 4))
+        story.append(Spacer(1, 10))
 
-        # Remarks Box
-        remarks_html = f"<b><font color='{navy_primary.hexval()}'>General Remarks:</font></b><br/>{remarks_val.replace('\n', '<br/>')}"
-        t_rem = Table([[Paragraph(remarks_html, cell_style)]], colWidths=[565])
+        # 4. Remarks Box
+        remarks_html = f"<b><font color='{PRIMARY_NAVY.hexval()}'>General Technical Remarks:</font></b><br/>{remarks_val.replace('\n', '<br/>')}"
+        t_rem = Table([[Paragraph(remarks_html, cell_style)]], colWidths=[555])
         t_rem.setStyle(TableStyle([
-            ('BACKGROUND', (0,0), (-1,-1), ice_blue_bg),
-            ('BOX', (0,0), (-1,-1), 1, navy_primary),
-            ('PADDING', (0,0), (-1,-1), 3),
+            ('BACKGROUND', (0,0), (-1,-1), LIGHT_BG),
+            ('BOX', (0,0), (-1,-1), 0.5, BORDER_GRAY),
+            ('PADDING', (0,0), (-1,-1), 6),
         ]))
         story.append(t_rem)
-        story.append(Spacer(1, 6))
+        story.append(Spacer(1, 15))
 
-        # PDF Signatures Section
-        sig_title_style = ParagraphStyle('SigTitle', parent=styles['Normal'], fontSize=7.5, leading=9, textColor=navy_primary, fontName="Helvetica-Bold")
-        sig_text_style = ParagraphStyle('SigText', parent=styles['Normal'], fontSize=7, leading=8.5, textColor=colors.HexColor("#475569"))
+        # 5. Executive Signatures Box
+        sig_title_style = ParagraphStyle('SigTitle', parent=styles['Normal'], fontSize=8, leading=10, textColor=PRIMARY_NAVY, fontName="Helvetica-Bold")
+        sig_text_style = ParagraphStyle('SigText', parent=styles['Normal'], fontSize=7.5, leading=9.5, textColor=SECONDARY_SLATE)
 
         sig_data = [
             [Paragraph("<b>Inspected & Prepared By:</b>", sig_title_style), Paragraph("<b>Customer Acknowledgment / Hospital Stamp:</b>", sig_title_style)],
-            [Spacer(1, 16), Spacer(1, 16)],
+            [Spacer(1, 22), Spacer(1, 22)],
             [Paragraph(f"........................................................<br/><b>Service Engineer:</b> {disp_engineer}<br/>Biomed International (Pvt) Ltd", sig_text_style),
              Paragraph("........................................................<br/><b>Authorized Signature & Stamp</b><br/>Hospital / Theatre Unit", sig_text_style)]
         ]
 
-        t_sig = Table(sig_data, colWidths=[280, 285])
+        t_sig = Table(sig_data, colWidths=[275, 280])
         t_sig.setStyle(TableStyle([
             ('VALIGN', (0,0), (-1,-1), 'TOP'),
             ('LEFTPADDING', (0,0), (-1,-1), 0),
             ('RIGHTPADDING', (0,0), (-1,-1), 0),
-            ('BOTTOMPADDING', (0,0), (-1,-1), 1),
         ]))
         story.append(t_sig)
 
         doc.build(story)
         pdf_bytes = buffer.getvalue()
 
+        # Clean temporary image files
         for tf in temp_files:
             if os.path.exists(tf):
                 os.remove(tf)
@@ -733,12 +728,12 @@ if st.button("📄 Generate PDF Report & Sync Summary", type="primary", use_cont
         
         synced = sync_to_google_sheet(summary_payload)
 
-        st.success("✅ PDF Generated with Enhanced High-Detail Photos & Synced!")
+        st.success("✅ High-End Executive PDF Report Successfully Generated!")
 
         st.download_button(
-            "📥 Download PDF Report",
+            "📥 Download Executive PDF Report",
             data=pdf_bytes,
-            file_name=f"Lap_Report_{disp_rep_no}.pdf",
+            file_name=f"Executive_Lap_Report_{disp_rep_no}.pdf",
             mime="application/pdf",
             use_container_width=True
         )
@@ -751,7 +746,7 @@ if st.button("📄 Generate PDF Report & Sync Summary", type="primary", use_cont
             date_str=date_str
         )
         st.download_button(
-            label="📊 Download Excel Summary",
+            label="📊 Download Excel Technical Summary",
             data=excel_bytes,
             file_name=f"Lap_Report_Summary_{disp_rep_no}.xlsx",
             mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
