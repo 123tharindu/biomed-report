@@ -3,14 +3,18 @@ import gspread
 from google.oauth2.service_account import Credentials
 import streamlit as st
 
-# --- Streamlit Page Configuration ---
+# ==========================================
+# 1. STREAMLIT PAGE CONFIGURATION
+# ==========================================
 st.set_page_config(
     page_title="Biomed Lap Scan Portal", page_icon="🏥", layout="centered"
 )
 st.title("Biomed Lap Inspection Portal")
 
 
-# --- Google Sheets Connection ---
+# ==========================================
+# 2. GOOGLE SHEETS AUTHENTICATION
+# ==========================================
 @st.cache_resource
 def get_google_sheet():
     scopes = ["https://www.googleapis.com/auth/spreadsheets"]
@@ -31,7 +35,9 @@ def get_google_sheet():
     return client.open("Biomed Lap Inspection Summary").sheet1
 
 
-# --- Function to Save Data to Google Sheet ---
+# ==========================================
+# 3. SAVE DATA FUNCTION WITH DUPLICATE CHECK
+# ==========================================
 def save_inspection(
     report_no,
     date,
@@ -46,7 +52,7 @@ def save_inspection(
         sheet = get_google_sheet()
         all_rows = sheet.get_all_values()
 
-        # Duplicate Check: Prevent consecutive duplicate submissions by Report No
+        # Duplicate Check: Skip if the last row has the exact same Report No
         if len(all_rows) > 1 and all_rows[-1][0] == str(report_no):
             return "duplicate"
 
@@ -70,7 +76,9 @@ def save_inspection(
         return str(e)
 
 
-# --- Complete Official Hospital List (59 Hospitals) ---
+# ==========================================
+# 4. COMPLETE OFFICIAL HOSPITAL LIST (59 HOSPITALS)
+# ==========================================
 HOSPITAL_LIST = [
     # Southern Province
     "District General Hospital Hambantota",
@@ -143,19 +151,21 @@ HOSPITAL_LIST = [
 ]
 
 
-# --- Streamlit UI Form ---
+# ==========================================
+# 5. STREAMLIT UI FORM
+# ==========================================
 with st.form("inspection_form", clear_on_submit=True):
     st.subheader("Inspection Entry Form")
 
     report_no = st.text_input("Report No *")
     date = st.date_input("Date", datetime.date.today())
 
-    # Hospital Selection with Dropdown Search
+    # Hospital Selectbox with Search
     selected_hospital = st.selectbox(
         "Select Hospital (Type to search)", options=HOSPITAL_LIST
     )
 
-    # Dynamic Field: Appears only if 'Other' is selected
+    # Dynamic Field: Appears only if 'Other (Type manually)' is selected
     if selected_hospital == "Other (Type manually)":
         final_hospital = st.text_input("Enter Hospital Name Manually *")
     else:
@@ -183,7 +193,7 @@ with st.form("inspection_form", clear_on_submit=True):
 
     submit_button = st.form_submit_button("Submit Record")
 
-    # Form Submission Handler
+    # Form Submit Action
     if submit_button:
         if (
             not report_no
