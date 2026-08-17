@@ -144,6 +144,7 @@ SL_HOSPITALS = [
 
 DAMAGE_SUGGESTIONS = [
     "-- Select Detailed Technical Damage --",
+    "Sealing Cap Damage: Silicone sealing element is torn/damaged. High risk of pneumoperitoneum gas leakage during insufflation.",
     "Insulation Damage: Insulation layer cracked/peeled near the shaft tip. High risk of stray electrical current leaks (HF insulation failure).",
     "Shaft Deformation: Outer shaft tube is visibly bent/misaligned, causing severe internal friction and restricting jaw movement.",
     "Jaw Alignment Failure: Working jaws are misaligned with worn-out gripping teeth. Instrument fails to hold tissue securely.",
@@ -178,6 +179,7 @@ def load_catalog(file_path):
             "BB365R": "Scissors Curved 17mm",
             "BB074R": "Forceps Dissecting",
             "BC051R": "Needle Holder",
+            "EK087P": "Sealing Cap",
         }
 
 
