@@ -1,3 +1,4 @@
+import base64
 import datetime
 import io
 import os
@@ -34,8 +35,6 @@ st.set_page_config(
     initial_sidebar_state="expanded",
 )
 
-LOGO_URL = "https://i.ibb.co/68v81yM/bmi-logo.png"
-
 st.markdown(
     """
 <style>
@@ -53,6 +52,11 @@ st.markdown(
         background-color: #FFFFFF; color: #0D2A4A;
         padding: 6px 12px; border-radius: 10px; font-size: 11px;
         font-weight: 700; text-align: center; box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    }
+    .logo-container {
+        background-color: #FFFFFF; padding: 6px 10px; border-radius: 8px;
+        display: flex; align-items: center; justify-content: center;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1); min-width: 50px; min-height: 45px;
     }
     .instrument-card {
         background-color: #FFFFFF; border: 1px solid #E2E8F0;
@@ -396,13 +400,15 @@ def update_desc_callback(idx):
 # 3. UI HEADER & SIDEBAR
 # ==========================================
 st.markdown(
-    f"""
+    """
     <div class="brand-header">
         <div class="status-badge">
             System Status:<br><span style="color:#00875A;">Active</span>
         </div>
         <div style="display: flex; align-items: center; gap: 15px;">
-            <img src="{LOGO_URL}" style="height: 50px; background-color: white; padding: 4px; border-radius: 6px;" alt="BMI Logo">
+            <div class="logo-container">
+                <span style="font-size: 26px; line-height: 1;">🏥</span>
+            </div>
             <div>
                 <h1 style="margin: 0;">BIOMED INTERNATIONAL (PVT) LTD</h1>
                 <p style="margin: 2px 0 0 0;">AESCULAP DIVISION — TECHNICAL INSPECTION & SCAN REPORT PORTAL</p>
