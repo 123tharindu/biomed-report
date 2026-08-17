@@ -3,30 +3,23 @@ import gspread
 from google.oauth2.service_account import Credentials
 import streamlit as st
 
-# ==========================================
-# 1. STREAMLIT PAGE CONFIGURATION
-# ==========================================
-st.set_page_config(
-    page_title="Biomed Lap Scan Portal", page_icon="🏥", layout="centered"
-)
+st.set_page_config(page_title="Biomed Lap Scan Portal", layout="centered")
 st.title("Biomed Lap Inspection Portal")
 
 
-# ==========================================
-# 2. GOOGLE SHEETS AUTHENTICATION
-# ==========================================
+# --- Google Sheets Authentication ---
 @st.cache_resource
 def get_google_sheet():
     scopes = ["https://www.googleapis.com/auth/spreadsheets"]
 
-    # Streamlit Secrets (Cloud Environment)
+    # Streamlit Secrets වලින් Credentials ලබාගැනීම
     if "gcp_service_account" in st.secrets:
         credentials_dict = dict(st.secrets["gcp_service_account"])
         creds = Credentials.from_service_account_info(
             credentials_dict, scopes=scopes
         )
     else:
-        # Local Development Credentials
+        # Local එකේදී credentials.json භාවිතය
         creds = Credentials.from_service_account_file(
             "credentials.json", scopes=scopes
         )
@@ -35,9 +28,7 @@ def get_google_sheet():
     return client.open("Biomed Lap Inspection Summary").sheet1
 
 
-# ==========================================
-# 3. SAVE DATA FUNCTION WITH DUPLICATE CHECK
-# ==========================================
+# --- Data Submission Function ---
 def save_inspection(
     report_no,
     date,
@@ -52,7 +43,7 @@ def save_inspection(
         sheet = get_google_sheet()
         all_rows = sheet.get_all_values()
 
-        # Duplicate Check: Skip if the last row has the exact same Report No
+        # Duplicate Check (අන්තිම Row එකේ Report No එක සමාන නම් Skip කරයි)
         if len(all_rows) > 1 and all_rows[-1][0] == str(report_no):
             return "duplicate"
 
@@ -76,105 +67,37 @@ def save_inspection(
         return str(e)
 
 
-# ==========================================
-# 4. COMPLETE OFFICIAL HOSPITAL LIST (59 HOSPITALS)
-# ==========================================
+# --- Hospital Options List ---
 HOSPITAL_LIST = [
-    # Southern Province
-    "District General Hospital Hambantota",
-    "Base Hospital Tangalle",
-    "District General Hospital Matara",
-    "Base Hospital Kamburupitiya",
-    "National Hospital Galle (Karapitiya)",
-    "Galle Mediclinic / Cardicare",
-    "Ruhunu Hospital Galle",
-    "Base Hospital Elpitiya",
-    "Base Hospital Balapitiya",
-    "Asiri Hospital Galle",
-    # Western Province (Kalutara & Colombo)
-    "Teaching Hospital Kalutara",
-    "Philip Hospital Kalutara",
-    "Kethumathi Maternity Hospital Kalutara",
-    "Colombo South Teaching Hospital (Kalubowila)",
-    "National Hospital of Sri Lanka (NHSL Colombo)",
-    "National Eye Hospital Colombo",
-    "Lady Ridgeway Hospital for Children (LRH)",
-    "Sri Jayewardenepura General Hospital (SJGH)",
-    "Nawaloka Hospital Colombo",
-    "Lanka Hospitals Colombo",
-    "Asiri Central Hospital",
-    "Castle Street Hospital for Women",
-    "De Soysa Hospital for Women (DMH)",
-    "Apeksha Hospital Maharagama",
-    "Colombo Army Hospital",
-    "Durdans Hospital Colombo",
-    "General Sir John Kotelawala Defence University Hospital (KDU)",
-    "Wish Fertility & Women's Hospital",
-    "Asiri Surgical Hospital",
-    "Kings Hospital Colombo",
-    # Western Province (Gampaha)
-    "District General Hospital Gampaha",
-    "Colombo North Teaching Hospital (Ragama)",
-    "Sri Lanka Navy General Hospital Welisara",
-    # North Western Province
+    "National Hospital Sri Lanka (NHSL)",
     "District General Hospital Chilaw",
-    "Base Hospital Puttalam",
-    "Teaching Hospital Kuliyapitiya",
-    "Teaching Hospital Kurunegala",
-    "Kurunegala Co-operative Hospital",
-    "Base Hospital Dambadeniya",
-    # Central Province
-    "Base Hospital Rikillagaskada",
-    "National Hospital Kandy",
-    "Asiri Hospital Kandy",
     "Teaching Hospital Peradeniya",
-    "Sirimavo Bandaranaike Specialized Children's Hospital",
-    "District General Hospital Matale",
-    "Base Hospital Dambulla",
-    # Uva / Sabaragamuwa / North Central
-    "Teaching Hospital Badulla",
-    "Teaching Hospital Anuradhapura",
-    "District General Hospital Polonnaruwa",
-    "Teaching Hospital Ratnapura",
-    "Base Hospital Embilipitiya",
-    "Teaching Hospital Kegalle",
-    # Eastern & Northern Province
-    "Teaching Hospital Batticaloa",
-    "Base Hospital Valaichchenai",
-    "District General Hospital Trincomalee",
-    "Base Hospital Akkaraipattu",
+    "Sri Jayewardenepura General Hospital",
+    "Teaching Hospital Karapitiya",
     "Teaching Hospital Jaffna",
-    "Holy Cross Hospital Jaffna",
-    "Northern Central Hospital Jaffna",
-    # Manual Input Option
-    "Other (Type manually)",
+    "Teaching Hospital Kandy",
+    "Teaching Hospital Kurunegala",
+    "Lady Ridgeway Hospital (LRH)",
+    "Castle Street Hospital for Women",
+    "De Soysa Hospital for Women",
+    "Other / N/A",
 ]
 
 
-# ==========================================
-# 5. STREAMLIT UI FORM
-# ==========================================
+# --- Streamlit UI Form ---
 with st.form("inspection_form", clear_on_submit=True):
     st.subheader("Inspection Entry Form")
 
-    report_no = st.text_input("Report No *")
+    report_no = st.text_input("Report No")
     date = st.date_input("Date", datetime.date.today())
 
-    # Hospital Selectbox with Search
-    selected_hospital = st.selectbox(
-        "Select Hospital (Type to search)", options=HOSPITAL_LIST
-    )
+    # Hospital Name එක Dropdown Select Box එකක් බවට පත්කිරීම
+    hospital = st.selectbox("Select Hospital", options=HOSPITAL_LIST)
 
-    # Dynamic Field: Appears only if 'Other (Type manually)' is selected
-    if selected_hospital == "Other (Type manually)":
-        final_hospital = st.text_input("Enter Hospital Name Manually *")
-    else:
-        final_hospital = selected_hospital
-
-    engineer = st.text_input("Engineer Name *")
+    engineer = st.text_input("Engineer Name")
     instrument_names = st.text_area(
         "Instrument Names (Comma separated)",
-        placeholder="e.g., Laparoscope 10mm, Trocar 5mm, Grasper, Curved Scissors",
+        placeholder="Laparoscope, Scissors, Forceps",
     )
 
     col1, col2, col3 = st.columns(3)
@@ -193,25 +116,15 @@ with st.form("inspection_form", clear_on_submit=True):
 
     submit_button = st.form_submit_button("Submit Record")
 
-    # Form Submit Action
     if submit_button:
-        if (
-            not report_no
-            or not engineer
-            or (
-                selected_hospital == "Other (Type manually)"
-                and not final_hospital
-            )
-        ):
-            st.warning(
-                "Please fill in all required fields (Report No, Hospital, and Engineer Name)!"
-            )
+        if not report_no or not engineer:
+            st.warning("Please fill in Report No and Engineer Name!")
         else:
             with st.spinner("Saving to Google Sheets..."):
                 res = save_inspection(
                     report_no,
                     date,
-                    final_hospital,
+                    hospital,
                     engineer,
                     instrument_names,
                     total_inst,
