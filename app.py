@@ -162,29 +162,33 @@ EXCEL_FILE = "Full Laparoscopy Articles Updated master file 07.07.2026.xlsx"
 
 @st.cache_data
 def load_catalog(file_path):
-    try:
-        import pandas as pd
+    if os.path.exists(file_path):
+        try:
+            import pandas as pd
 
-        df = pd.read_excel(file_path)
-        df.columns = [str(col).strip() for col in df.columns]
-        art_col, desc_col = (
-            df.columns[0],
-            df.columns[1] if len(df.columns) > 1 else df.columns[0],
-        )
-        df = df.dropna(subset=[art_col])
-        return dict(
-            zip(
-                df[art_col].astype(str).str.strip(),
-                df[desc_col].astype(str).str.strip(),
+            df = pd.read_excel(file_path)
+            df.columns = [str(col).strip() for col in df.columns]
+            art_col, desc_col = (
+                df.columns[0],
+                df.columns[1] if len(df.columns) > 1 else df.columns[0],
             )
-        )
-    except Exception:
-        return {
-            "BB365R": "Scissors Curved 17mm",
-            "BB074R": "Forceps Dissecting",
-            "BC051R": "Needle Holder",
-            "EK087P": "Sealing Cap",
-        }
+            df = df.dropna(subset=[art_col])
+            return dict(
+                zip(
+                    df[art_col].astype(str).str.strip(),
+                    df[desc_col].astype(str).str.strip(),
+                )
+            )
+        except Exception as e:
+            st.warning(f"Excel reading note: {e}")
+
+    # Fallback default dictionary if file is missing/fails
+    return {
+        "BB365R": "Scissors Curved 17mm",
+        "BB074R": "Forceps Dissecting",
+        "BC051R": "Needle Holder",
+        "EK087P": "Sealing Cap",
+    }
 
 
 catalog_dict = load_catalog(EXCEL_FILE)
