@@ -1,6 +1,7 @@
 import datetime
 import io
 import os
+import base64
 import openpyxl
 from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
 from openpyxl.utils import get_column_letter
@@ -34,7 +35,22 @@ st.set_page_config(
     initial_sidebar_state="expanded",
 )
 
-LOGO_URL = "https://i.ibb.co/68v81yM/bmi-logo.png"
+# Helper function to get Base64 of local image safely
+def get_local_logo_base64(file_path="bmi_logo.png"):
+    if os.path.exists(file_path):
+        try:
+            with open(file_path, "rb") as f:
+                encoded = base64.b64encode(f.read()).decode()
+                return f"data:image/png;base64,{encoded}"
+        except Exception:
+            pass
+    return "https://via.placeholder.com/100x50.png?text=BMI+Logo"
+
+LOGO_SRC = get_local_logo_base64("bmi_logo.png")
+
+# Set Top Left App Logo using Streamlit Native Function (Top Navigation Bar)
+if os.path.exists("bmi_logo.png"):
+    st.logo("bmi_logo.png", icon_image="bmi_logo.png")
 
 st.markdown(
     """
@@ -53,6 +69,22 @@ st.markdown(
         background-color: #FFFFFF; color: #0D2A4A;
         padding: 6px 12px; border-radius: 10px; font-size: 11px;
         font-weight: 700; text-align: center; box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    }
+    .header-logo-box {
+        background-color: #FFFFFF;
+        padding: 4px 8px;
+        border-radius: 8px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+        height: 50px;
+        min-width: 60px;
+    }
+    .header-logo-box img {
+        max-height: 42px;
+        max-width: 100px;
+        object-fit: contain;
     }
     .instrument-card {
         background-color: #FFFFFF; border: 1px solid #E2E8F0;
@@ -182,7 +214,6 @@ def load_catalog(file_path):
         except Exception as e:
             st.warning(f"Excel reading note: {e}")
 
-    # Fallback default dictionary if file is missing/fails
     return {
         "BB365R": "Scissors Curved 17mm",
         "BB074R": "Forceps Dissecting",
@@ -406,7 +437,9 @@ st.markdown(
             System Status:<br><span style="color:#00875A;">Active</span>
         </div>
         <div style="display: flex; align-items: center; gap: 15px;">
-            <img src="{LOGO_URL}" style="height: 50px; background-color: white; padding: 4px; border-radius: 6px;" alt="BMI Logo">
+            <div class="header-logo-box">
+                <img src="{LOGO_SRC}" alt="Biomed Logo" />
+            </div>
             <div>
                 <h1 style="margin: 0;">BIOMED INTERNATIONAL (PVT) LTD</h1>
                 <p style="margin: 2px 0 0 0;">AESCULAP DIVISION — TECHNICAL INSPECTION & SCAN REPORT PORTAL</p>
