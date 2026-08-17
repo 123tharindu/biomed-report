@@ -32,7 +32,7 @@ st.set_page_config(
     page_title="Biomed International - AI Lap Scan Portal",
     page_icon="🏥",
     layout="wide",
-    initial_sidebar_state="collapsed", # Mobile UI එකට පහසු වන ලෙස Sidebar එක auto-collapse කර ඇත
+    initial_sidebar_state="collapsed",
 )
 
 def get_local_logo_base64(file_path="bmi_logo.png"):
@@ -50,7 +50,7 @@ LOGO_SRC = get_local_logo_base64("bmi_logo.png")
 if os.path.exists("bmi_logo.png"):
     st.logo("bmi_logo.png", icon_image="bmi_logo.png")
 
-# Mobile Optimization Custom CSS
+# Mobile Optimization & Fixed Dropdown CSS
 st.markdown(
     """
 <style>
@@ -63,6 +63,20 @@ st.markdown(
     }
     
     .main { background-color: #F8FAFC; font-family: 'Inter', sans-serif; }
+    
+    /* Mobile Dropdown / SelectBox UI Fix for On-Screen Keyboard */
+    div[data-baseweb="popover"] {
+        max-height: 220px !important;
+        z-index: 999999 !important;
+    }
+    div[data-baseweb="popover"] > div {
+        max-height: 220px !important;
+        overflow-y: auto !important;
+        -webkit-overflow-scrolling: touch !important;
+    }
+    div[role="listbox"] {
+        max-height: 200px !important;
+    }
     
     /* Responsive Header Area */
     .brand-header {
