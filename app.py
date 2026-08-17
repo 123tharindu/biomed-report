@@ -5,7 +5,7 @@ import base64
 import openpyxl
 from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
 from openpyxl.utils import get_column_letter
-from PIL import Image, ImageOps
+from PIL import Image, ImageOps, ImageEnhance
 
 from google import genai
 import gspread
@@ -273,10 +273,30 @@ def load_catalog(file_path):
 catalog_dict = load_catalog(EXCEL_FILE)
 article_options = sorted(list(catalog_dict.keys()))
 
-def process_and_compress_image(image_file, max_size=(800, 800)):
+# 📸 Enhanced Image Processing Function (Enhances Photo Details & Sharpness)
+def process_and_compress_image(image_file, max_size=(1000, 1000)):
     img = Image.open(image_file)
     img = ImageOps.exif_transpose(img)
+    
+    # 1. Image Resize for optimal memory and detail
     img.thumbnail(max_size, Image.Resampling.LANCZOS)
+    
+    # Convert to RGB if PNG/RGBA
+    if img.mode in ("RGBA", "P"):
+        img = img.convert("RGB")
+        
+    # 2. Enhance Contrast (Details stand out better)
+    enhancer = ImageEnhance.Contrast(img)
+    img = enhancer.enhance(1.25)
+    
+    # 3. Enhance Sharpness (Micro-cracks, wear & tears become clearer)
+    enhancer = ImageEnhance.Sharpness(img)
+    img = enhancer.enhance(1.4)
+    
+    # 4. Enhance Brightness slightly for phone photos
+    enhancer = ImageEnhance.Brightness(img)
+    img = enhancer.enhance(1.05)
+    
     return img
 
 def analyze_damage_with_ai(image_file, item_name):
@@ -477,7 +497,9 @@ for i in range(st.session_state.num_instruments):
     inst_item = {}
     inst_item["image"] = st.file_uploader(f"📷 Upload Image / Take Photo #{i+1}", type=["jpg", "png", "jpeg"], key=f"uploader_{i}")
     if inst_item["image"]:
-        st.image(inst_item["image"], use_container_width=True)
+        # Preview processed enhanced image
+        enhanced_preview = process_and_compress_image(inst_item["image"])
+        st.image(enhanced_preview, caption="✨ Enhanced Photo Preview", use_container_width=True)
             
     is_custom = st.checkbox("✍️ Custom Article No", key=f"custom_chk_{i}")
     if is_custom:
@@ -605,7 +627,7 @@ if st.button("📄 Generate PDF Report & Sync Summary", type="primary", use_cont
         story.append(t_meta)
         story.append(Spacer(1, 4))
 
-        # PDF Instruments Table - Exact Photo Dimensions (120x110) Maintained
+        # PDF Instruments Table - High Quality Auto-Enhanced Image Embedded
         table_data = [[
             Paragraph("#", th_style),
             Paragraph("INSPECTION PHOTO", th_style),
@@ -622,10 +644,10 @@ if st.button("📄 Generate PDF Report & Sync Summary", type="primary", use_cont
             img_cell = Paragraph("No Image Attached", cell_center)
             if item["image"]:
                 t_path = f"temp_p_{idx}.jpg"
-                p_img = process_and_compress_image(item["image"])
-                p_img.convert("RGB").save(t_path, "JPEG")
+                p_img = process_and_compress_image(item["image"], max_size=(1000, 1000))
+                p_img.save(t_path, "JPEG", quality=95)
                 
-                # Large Photo Dimensions Maintained
+                # Large Enhanced Photo Dimensions in PDF
                 img_cell = RLImage(t_path, width=120, height=110)
                 temp_files.append(t_path)
 
@@ -711,7 +733,7 @@ if st.button("📄 Generate PDF Report & Sync Summary", type="primary", use_cont
         
         synced = sync_to_google_sheet(summary_payload)
 
-        st.success("✅ PDF Generated & Synced!")
+        st.success("✅ PDF Generated with Enhanced High-Detail Photos & Synced!")
 
         st.download_button(
             "📥 Download PDF Report",
