@@ -51,7 +51,6 @@ LOGO_SRC = get_local_logo_base64("bmi_logo.png")
 if os.path.exists("bmi_logo.png"):
     st.logo("bmi_logo.png", icon_image="bmi_logo.png")
 
-# Executive UI Styling
 st.markdown(
     """
 <style>
@@ -71,7 +70,6 @@ st.markdown(
         background-color: #F8FAFC; 
     }
 
-    /* Fixed Selectbox Popover for Mobile */
     div[data-baseweb="popover"] {
         max-height: 250px !important;
         z-index: 999999 !important;
@@ -81,7 +79,6 @@ st.markdown(
         overflow-y: auto !important;
     }
 
-    /* Header Banner */
     .brand-header {
         background: linear-gradient(135deg, #0F172A 0%, #1E293B 50%, #1E3A8A 100%);
         padding: 20px 24px; 
@@ -119,7 +116,6 @@ st.markdown(
         gap: 6px;
     }
 
-    /* Professional Card UI */
     .instrument-card {
         background: #FFFFFF; 
         border: 1px solid #E2E8F0;
@@ -146,7 +142,6 @@ st.markdown(
         margin-bottom: 16px; 
     }
 
-    /* Streamlit Buttons Enhancement */
     .stButton>button {
         border-radius: 10px !important;
         font-weight: 700 !important;
@@ -263,28 +258,19 @@ def load_catalog(file_path):
 catalog_dict = load_catalog(EXCEL_FILE)
 article_options = sorted(list(catalog_dict.keys()))
 
-# 📸 Image Detail & Contrast Processing
 def process_and_compress_image(image_file, max_size=(1200, 1200)):
     img = Image.open(image_file)
     img = ImageOps.exif_transpose(img)
-    
     img.thumbnail(max_size, Image.Resampling.LANCZOS)
-    
     if img.mode in ("RGBA", "P"):
         img = img.convert("RGB")
-        
-    # Contrast Enhancement
+    
     enhancer = ImageEnhance.Contrast(img)
     img = enhancer.enhance(1.25)
-    
-    # Sharpness Enhancement
     enhancer = ImageEnhance.Sharpness(img)
     img = enhancer.enhance(1.45)
-    
-    # Slight Brightness Balancing
     enhancer = ImageEnhance.Brightness(img)
     img = enhancer.enhance(1.05)
-    
     return img
 
 def analyze_damage_with_ai(image_file, item_name):
@@ -433,6 +419,18 @@ def generate_professional_excel(instruments_data, hospital_name, engineer_name, 
 if 'num_instruments' not in st.session_state:
     st.session_state.num_instruments = 1
 
+# Session States for Generated Files and Sync Payload
+if 'pdf_generated' not in st.session_state:
+    st.session_state.pdf_generated = False
+if 'last_pdf_bytes' not in st.session_state:
+    st.session_state.last_pdf_bytes = None
+if 'last_excel_bytes' not in st.session_state:
+    st.session_state.last_excel_bytes = None
+if 'last_report_no' not in st.session_state:
+    st.session_state.last_report_no = ""
+if 'summary_payload' not in st.session_state:
+    st.session_state.summary_payload = None
+
 def update_desc_callback(idx):
     sel_art = st.session_state.get(f"s_art_{idx}")
     if sel_art and sel_art in catalog_dict:
@@ -485,7 +483,6 @@ for i in range(st.session_state.num_instruments):
     st.markdown(f"<div class='instrument-card'><b>🔪 Instrument Entry #{i+1}</b>", unsafe_allow_html=True)
     
     inst_item = {}
-    
     col_img, col_info = st.columns([1, 2])
     
     with col_img:
@@ -543,13 +540,11 @@ with col_rem:
 st.markdown("<br>", unsafe_allow_html=True)
 
 # ==========================================
-# 5. HIGH-END EXECUTIVE PDF GENERATION (LARGER FONTS)
+# 5. HIGH-END EXECUTIVE PDF GENERATION
 # ==========================================
-if st.button("📄 Generate Executive PDF Report & Sync", type="primary", use_container_width=True):
-    with st.spinner("Generating PDF Report with Larger & Clearer Fonts..."):
+if st.button("📄 Build Executive PDF Report", type="primary", use_container_width=True):
+    with st.spinner("Generating PDF Report..."):
         buffer = io.BytesIO()
-        
-        # Professional Margins
         doc = SimpleDocTemplate(
             buffer,
             pagesize=A4,
@@ -561,13 +556,11 @@ if st.button("📄 Generate Executive PDF Report & Sync", type="primary", use_co
         story, styles = [], getSampleStyleSheet()
         temp_files = []
 
-        # High-End Corporate Palette
         PRIMARY_NAVY = colors.HexColor("#0F172A")
         SECONDARY_SLATE = colors.HexColor("#334155")
         LIGHT_BG = colors.HexColor("#F8FAFC")
         BORDER_GRAY = colors.HexColor("#E2E8F0")
 
-        # 🔍 ENHANCED LARGER TYPOGRAPHY STYLES
         title_style = ParagraphStyle('DocTitle', parent=styles['Heading1'], fontSize=12.5, leading=15, textColor=PRIMARY_NAVY, fontName="Helvetica-Bold")
         sub_style = ParagraphStyle('DocSub', parent=styles['Normal'], fontSize=8.5, leading=11, textColor=colors.HexColor("#64748B"))
         meta_label = ParagraphStyle('MetaLabel', parent=styles['Normal'], fontSize=8.5, leading=11, textColor=PRIMARY_NAVY, fontName="Helvetica-Bold")
@@ -576,7 +569,6 @@ if st.button("📄 Generate Executive PDF Report & Sync", type="primary", use_co
         cell_center = ParagraphStyle('TableCellCenter', parent=cell_style, alignment=1)
         th_style = ParagraphStyle('TH', parent=cell_style, fontSize=8.0, leading=10, textColor=colors.white, fontName="Helvetica-Bold", alignment=1)
 
-        # 1. Header Section
         logo_img = RLImage("bmi_logo.png", width=75, height=32) if os.path.exists("bmi_logo.png") else Paragraph("<b>BIOMED</b>", title_style)
         
         comp_details = [
@@ -597,7 +589,6 @@ if st.button("📄 Generate Executive PDF Report & Sync", type="primary", use_co
         story.append(t_header)
         story.append(HRFlowable(width="100%", thickness=1.5, color=PRIMARY_NAVY, spaceBefore=0, spaceAfter=8))
 
-        # 2. Metadata Box
         disp_hospital = hospital_name if hospital_name else "N/A"
         disp_engineer = engineer_val.strip() if engineer_val.strip() else "Biomed Technical Team"
         disp_rep_no = report_no_val.strip() if report_no_val.strip() else "N/A"
@@ -619,7 +610,6 @@ if st.button("📄 Generate Executive PDF Report & Sync", type="primary", use_co
         story.append(t_meta)
         story.append(Spacer(1, 10))
 
-        # 3. Main Instruments Table (With Larger Text)
         table_data = [[
             Paragraph("#", th_style),
             Paragraph("INSPECTION PHOTO", th_style),
@@ -673,7 +663,6 @@ if st.button("📄 Generate Executive PDF Report & Sync", type="primary", use_co
         story.append(t_main)
         story.append(Spacer(1, 10))
 
-        # 4. Remarks Box
         remarks_html = f"<b><font color='{PRIMARY_NAVY.hexval()}'>General Technical Remarks:</font></b><br/>{remarks_val.replace('\n', '<br/>')}"
         t_rem = Table([[Paragraph(remarks_html, cell_style)]], colWidths=[555])
         t_rem.setStyle(TableStyle([
@@ -684,7 +673,6 @@ if st.button("📄 Generate Executive PDF Report & Sync", type="primary", use_co
         story.append(t_rem)
         story.append(Spacer(1, 15))
 
-        # 5. Executive Signatures Box
         sig_title_style = ParagraphStyle('SigTitle', parent=styles['Normal'], fontSize=8.5, leading=11, textColor=PRIMARY_NAVY, fontName="Helvetica-Bold")
         sig_text_style = ParagraphStyle('SigText', parent=styles['Normal'], fontSize=8.0, leading=10, textColor=SECONDARY_SLATE)
 
@@ -704,16 +692,15 @@ if st.button("📄 Generate Executive PDF Report & Sync", type="primary", use_co
         story.append(t_sig)
 
         doc.build(story)
-        pdf_bytes = buffer.getvalue()
+        st.session_state.last_pdf_bytes = buffer.getvalue()
 
-        # Clean temporary image files
         for tf in temp_files:
             if os.path.exists(tf):
                 os.remove(tf)
 
         all_descriptions = ", ".join([item.get("name", "") for item in instruments_data if item.get("name")])
         
-        summary_payload = {
+        st.session_state.summary_payload = {
             "report_no": disp_rep_no,
             "date": date_str,
             "hospital": disp_hospital,
@@ -725,29 +712,48 @@ if st.button("📄 Generate Executive PDF Report & Sync", type="primary", use_co
             "logged_at": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         }
         
-        synced = sync_to_google_sheet(summary_payload)
-
-        st.success("✅ Large Font Executive PDF Generated Successfully!")
-
-        st.download_button(
-            "📥 Download Executive PDF Report",
-            data=pdf_bytes,
-            file_name=f"Executive_Lap_Report_{disp_rep_no}.pdf",
-            mime="application/pdf",
-            use_container_width=True
-        )
-            
-        excel_bytes = generate_professional_excel(
+        st.session_state.last_excel_bytes = generate_professional_excel(
             instruments_data=instruments_data,
             hospital_name=disp_hospital,
             engineer_name=disp_engineer,
             report_no=disp_rep_no,
             date_str=date_str
         )
+        st.session_state.last_report_no = disp_rep_no
+        st.session_state.pdf_generated = True
+
+# ==========================================
+# 6. DOWNLOADS & MANUAL GOOGLE SHEET SYNC
+# ==========================================
+if st.session_state.pdf_generated and st.session_state.last_pdf_bytes:
+    st.success("✅ Executive PDF Report Ready!")
+    
+    col_dl1, col_dl2 = st.columns(2)
+    with col_dl1:
+        st.download_button(
+            "📥 Download Executive PDF Report",
+            data=st.session_state.last_pdf_bytes,
+            file_name=f"Executive_Lap_Report_{st.session_state.last_report_no}.pdf",
+            mime="application/pdf",
+            use_container_width=True
+        )
+    with col_dl2:
         st.download_button(
             label="📊 Download Excel Technical Summary",
-            data=excel_bytes,
-            file_name=f"Lap_Report_Summary_{disp_rep_no}.xlsx",
+            data=st.session_state.last_excel_bytes,
+            file_name=f"Lap_Report_Summary_{st.session_state.last_report_no}.xlsx",
             mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
             use_container_width=True
         )
+
+    st.markdown("<br>", unsafe_allow_html=True)
+    st.markdown("<div class='section-title'>📊 Manual Data Sync to Cloud</div>", unsafe_allow_html=True)
+    
+    if st.button("🔄 Sync Summary to Google Sheet Now", type="secondary", use_container_width=True):
+        if st.session_state.summary_payload:
+            with st.spinner("Uploading record to Google Sheet..."):
+                synced = sync_to_google_sheet(st.session_state.summary_payload)
+                if synced:
+                    st.success("✅ Technical Report Summary successfully synced to Google Sheet!")
+                else:
+                    st.error("⚠️ Failed to sync with Google Sheet. Please check API credentials or Webhook URL.")
