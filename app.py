@@ -289,11 +289,24 @@ def analyze_damage_with_ai(image_file, item_name):
     except Exception as e:
         return f"AI Error: {str(e)}", "Service"
 
-def sync_to_google_sheet(summary_data):
+# 🔄 GOOGLE SHEET SYNC FUNCTION (Matches Image Columns A to H)
+def sync_to_google_sheet(instruments_data, meta_data):
     webhook_url = st.secrets.get("WEBHOOK_URL", "")
     if webhook_url:
         try:
-            requests.post(webhook_url, json=summary_data, timeout=10)
+            payload = []
+            for item in instruments_data:
+                payload.append({
+                    "report_no": meta_data.get("report_no"),
+                    "date": meta_data.get("date"),
+                    "hospital": meta_data.get("hospital"),
+                    "engineer": meta_data.get("engineer"),
+                    "article_num": item.get("art_no"),
+                    "description": item.get("name"),
+                    "sr_number": item.get("sr_no"),
+                    "damage": item.get("damage")
+                })
+            requests.post(webhook_url, json=payload, timeout=10)
             return True
         except Exception:
             pass
@@ -307,20 +320,22 @@ def sync_to_google_sheet(summary_data):
         client_gs = gspread.authorize(creds)
         sheet = client_gs.open("Biomed Lap Inspection Summary").sheet1
         
-        row = [
-            summary_data.get("report_no"),
-            summary_data.get("date"),
-            summary_data.get("hospital"),
-            summary_data.get("engineer"),
-            summary_data.get("instrument_name"),
-            summary_data.get("total_instruments"),
-            summary_data.get("replace_count"),
-            summary_data.get("service_count"),
-            summary_data.get("logged_at")
-        ]
-        sheet.append_row(row)
+        rows_to_insert = []
+        for item in instruments_data:
+            rows_to_insert.append([
+                meta_data.get("report_no"),     # A: Report No
+                meta_data.get("date"),          # B: Date
+                meta_data.get("hospital"),      # C: Hospital
+                meta_data.get("engineer"),      # D: Inspection Engineer
+                item.get("art_no"),             # E: Instruments Article num
+                item.get("name"),               # F: Description
+                item.get("sr_no", ""),          # G: Machine Compatible/SR Number
+                item.get("damage")              # H: Details of Damage
+            ])
+            
+        sheet.append_rows(rows_to_insert)
         return True
-    except Exception:
+    except Exception as e:
         return False
 
 def generate_professional_excel(instruments_data, hospital_name, engineer_name, report_no, date_str):
@@ -419,7 +434,6 @@ def generate_professional_excel(instruments_data, hospital_name, engineer_name, 
 if 'num_instruments' not in st.session_state:
     st.session_state.num_instruments = 1
 
-# Session States for Generated Files and Sync Payload
 if 'pdf_generated' not in st.session_state:
     st.session_state.pdf_generated = False
 if 'last_pdf_bytes' not in st.session_state:
@@ -428,8 +442,10 @@ if 'last_excel_bytes' not in st.session_state:
     st.session_state.last_excel_bytes = None
 if 'last_report_no' not in st.session_state:
     st.session_state.last_report_no = ""
-if 'summary_payload' not in st.session_state:
-    st.session_state.summary_payload = None
+if 'meta_payload' not in st.session_state:
+    st.session_state.meta_payload = None
+if 'instruments_payload' not in st.session_state:
+    st.session_state.instruments_payload = None
 
 def update_desc_callback(idx):
     sel_art = st.session_state.get(f"s_art_{idx}")
@@ -502,6 +518,9 @@ for i in range(st.session_state.num_instruments):
             
         inst_item["art_no"] = art_no
         inst_item["name"] = inst_name
+        
+        # 🔗 Machine Compatible / SR Number Input Field (Column G)
+        inst_item["sr_no"] = st.text_input(f"Machine Compatible / SR Number #{i+1}", key=f"sr_{i}")
         
         if inst_item["image"] and GEMINI_API_KEY:
             if st.button(f"✨ AI Auto-Detect Damage #{i+1}", key=f"ai_btn_{i}"):
@@ -619,9 +638,6 @@ if st.button("📄 Build Executive PDF Report", type="primary", use_container_wi
             Paragraph("RECOMMENDATION", th_style)
         ]]
 
-        replace_count = 0
-        service_count = 0
-
         for idx, item in enumerate(instruments_data):
             img_cell = Paragraph("No Image Attached", cell_center)
             if item["image"]:
@@ -634,11 +650,6 @@ if st.button("📄 Build Executive PDF Report", type="primary", use_container_wi
 
             rec_text = item["recommendation"]
             rec_color = "#DC2626" if rec_text == "Replace" else ("#D97706" if rec_text in ["Service", "Repair"] else "#16A34A")
-            
-            if rec_text == "Replace":
-                replace_count += 1
-            else:
-                service_count += 1
 
             table_data.append([
                 Paragraph(str(idx + 1), cell_center),
@@ -698,19 +709,14 @@ if st.button("📄 Build Executive PDF Report", type="primary", use_container_wi
             if os.path.exists(tf):
                 os.remove(tf)
 
-        all_descriptions = ", ".join([item.get("name", "") for item in instruments_data if item.get("name")])
-        
-        st.session_state.summary_payload = {
+        # Save payloads for manual sync
+        st.session_state.meta_payload = {
             "report_no": disp_rep_no,
             "date": date_str,
             "hospital": disp_hospital,
-            "engineer": disp_engineer,
-            "instrument_name": all_descriptions,
-            "total_instruments": len(instruments_data),
-            "replace_count": replace_count,
-            "service_count": service_count,
-            "logged_at": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            "engineer": disp_engineer
         }
+        st.session_state.instruments_payload = instruments_data
         
         st.session_state.last_excel_bytes = generate_professional_excel(
             instruments_data=instruments_data,
@@ -750,10 +756,15 @@ if st.session_state.pdf_generated and st.session_state.last_pdf_bytes:
     st.markdown("<div class='section-title'>📊 Manual Data Sync to Cloud</div>", unsafe_allow_html=True)
     
     if st.button("🔄 Sync Summary to Google Sheet Now", type="secondary", use_container_width=True):
-        if st.session_state.summary_payload:
-            with st.spinner("Uploading record to Google Sheet..."):
-                synced = sync_to_google_sheet(st.session_state.summary_payload)
+        if st.session_state.get("instruments_payload") and st.session_state.get("meta_payload"):
+            with st.spinner("Uploading items to Google Sheet..."):
+                synced = sync_to_google_sheet(
+                    st.session_state.instruments_payload, 
+                    st.session_state.meta_payload
+                )
                 if synced:
-                    st.success("✅ Technical Report Summary successfully synced to Google Sheet!")
+                    st.success("✅ All Instrument details successfully synced to Google Sheet!")
                 else:
-                    st.error("⚠️ Failed to sync with Google Sheet. Please check API credentials or Webhook URL.")
+                    st.error("⚠️ Failed to sync with Google Sheet. Please check API credentials or Sheet Name.")
+        else:
+            st.warning("⚠️ Please generate the PDF Report first before syncing.")
