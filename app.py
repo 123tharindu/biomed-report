@@ -289,7 +289,7 @@ def analyze_damage_with_ai(image_file, item_name):
     except Exception as e:
         return f"AI Error: {str(e)}", "Service"
 
-# 🔄 GOOGLE SHEET SYNC FUNCTION (Matches Image Columns A to H)
+# 🔄 GOOGLE SHEET SYNC FUNCTION (WITH ERROR PRINTING)
 def sync_to_google_sheet(instruments_data, meta_data):
     webhook_url = st.secrets.get("WEBHOOK_URL", "")
     if webhook_url:
@@ -307,16 +307,19 @@ def sync_to_google_sheet(instruments_data, meta_data):
                     "damage": item.get("damage")
                 })
             requests.post(webhook_url, json=payload, timeout=10)
-            return True
-        except Exception:
+            return True, "Webhook Success"
+        except Exception as e:
             pass
 
     try:
         scopes = ["https://www.googleapis.com/auth/spreadsheets"]
         if "gcp_service_account" in st.secrets:
             creds = Credentials.from_service_account_info(dict(st.secrets["gcp_service_account"]), scopes=scopes)
-        else:
+        elif os.path.exists("credentials.json"):
             creds = Credentials.from_service_account_file("credentials.json", scopes=scopes)
+        else:
+            return False, "Neither st.secrets['gcp_service_account'] nor credentials.json was found!"
+
         client_gs = gspread.authorize(creds)
         sheet = client_gs.open("Biomed Lap Inspection Summary").sheet1
         
@@ -334,9 +337,9 @@ def sync_to_google_sheet(instruments_data, meta_data):
             ])
             
         sheet.append_rows(rows_to_insert)
-        return True
+        return True, "Success"
     except Exception as e:
-        return False
+        return False, str(e)
 
 def generate_professional_excel(instruments_data, hospital_name, engineer_name, report_no, date_str):
     wb = openpyxl.Workbook()
@@ -518,8 +521,6 @@ for i in range(st.session_state.num_instruments):
             
         inst_item["art_no"] = art_no
         inst_item["name"] = inst_name
-        
-        # 🔗 Machine Compatible / SR Number Input Field (Column G)
         inst_item["sr_no"] = st.text_input(f"Machine Compatible / SR Number #{i+1}", key=f"sr_{i}")
         
         if inst_item["image"] and GEMINI_API_KEY:
@@ -709,7 +710,6 @@ if st.button("📄 Build Executive PDF Report", type="primary", use_container_wi
             if os.path.exists(tf):
                 os.remove(tf)
 
-        # Save payloads for manual sync
         st.session_state.meta_payload = {
             "report_no": disp_rep_no,
             "date": date_str,
@@ -758,13 +758,13 @@ if st.session_state.pdf_generated and st.session_state.last_pdf_bytes:
     if st.button("🔄 Sync Summary to Google Sheet Now", type="secondary", use_container_width=True):
         if st.session_state.get("instruments_payload") and st.session_state.get("meta_payload"):
             with st.spinner("Uploading items to Google Sheet..."):
-                synced = sync_to_google_sheet(
+                synced, err_msg = sync_to_google_sheet(
                     st.session_state.instruments_payload, 
                     st.session_state.meta_payload
                 )
                 if synced:
                     st.success("✅ All Instrument details successfully synced to Google Sheet!")
                 else:
-                    st.error("⚠️ Failed to sync with Google Sheet. Please check API credentials or Sheet Name.")
+                    st.error(f"❌ Connection Error Details: {err_msg}")
         else:
             st.warning("⚠️ Please generate the PDF Report first before syncing.")
