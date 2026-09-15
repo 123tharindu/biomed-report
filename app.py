@@ -172,6 +172,7 @@ SL_HOSPITALS = [
     "-- Select Hospital / Institute --",
     "National Hospital of Sri Lanka (NHSL Colombo)",
     "National Hospital Kandy",
+    "Holy Cross Health Centre",
     "National Hospital Galle (Karapitiya)",
     "Colombo South Teaching Hospital (Kalubowila)",
     "Colombo North Teaching Hospital (Ragama)",
