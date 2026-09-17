@@ -290,7 +290,7 @@ def analyze_damage_with_ai(image_file, item_name):
     except Exception as e:
         return f"AI Error: {str(e)}", "Service"
 
-# 🔄 GOOGLE SHEET SYNC FUNCTION (WITH ERROR PRINTING)
+# 🔄 GOOGLE SHEET SYNC FUNCTION
 def sync_to_google_sheet(instruments_data, meta_data):
     webhook_url = st.secrets.get("WEBHOOK_URL", "")
     if webhook_url:
@@ -304,7 +304,6 @@ def sync_to_google_sheet(instruments_data, meta_data):
                     "engineer": meta_data.get("engineer"),
                     "article_num": item.get("art_no"),
                     "description": item.get("name"),
-                    "sr_number": item.get("sr_no"),
                     "damage": item.get("damage")
                 })
             requests.post(webhook_url, json=payload, timeout=10)
@@ -333,8 +332,7 @@ def sync_to_google_sheet(instruments_data, meta_data):
                 meta_data.get("engineer"),      # D: Inspection Engineer
                 item.get("art_no"),             # E: Instruments Article num
                 item.get("name"),               # F: Description
-                item.get("sr_no", ""),          # G: Machine Compatible/SR Number
-                item.get("damage")              # H: Details of Damage
+                item.get("damage")              # G: Details of Damage
             ])
             
         sheet.append_rows(rows_to_insert)
@@ -522,7 +520,6 @@ for i in range(st.session_state.num_instruments):
             
         inst_item["art_no"] = art_no
         inst_item["name"] = inst_name
-        inst_item["sr_no"] = st.text_input(f"Machine Compatible / SR Number #{i+1}", key=f"sr_{i}")
         
         if inst_item["image"] and GEMINI_API_KEY:
             if st.button(f"✨ AI Auto-Detect Damage #{i+1}", key=f"ai_btn_{i}"):
@@ -704,7 +701,21 @@ if st.button("📄 Build Executive PDF Report", type="primary", use_container_wi
         ]))
         story.append(t_sig)
 
-        doc.build(story)
+        # 🌊 AESCULAP BACKGROUND WATERMARK FUNCTION
+        def draw_watermark(canvas, doc):
+            canvas.saveState()
+            canvas.setFont("Helvetica-Bold", 60)
+            canvas.setFillColor(colors.HexColor("#0F172A"))
+            canvas.setFillAlpha(0.06)  # Light opacity / Transparent
+            
+            # Watermark Rotation & Positioning
+            canvas.translate(300, 420)
+            canvas.rotate(45)
+            canvas.drawCentredString(0, 0, "AESCULAP")
+            canvas.restoreState()
+
+        # Build Document with AESCULAP Watermark Background
+        doc.build(story, onFirstPage=draw_watermark, onLaterPages=draw_watermark)
         st.session_state.last_pdf_bytes = buffer.getvalue()
 
         for tf in temp_files:
