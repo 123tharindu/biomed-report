@@ -11,10 +11,6 @@ from google import genai
 import gspread
 from google.oauth2.service_account import Credentials
 import requests
-import smtplib
-from email.mime.multipart import MIMEMultipart
-from email.mime.text import MIMEText
-from email.mime.application import MIMEApplication
 
 from reportlab.lib import colors
 from reportlab.lib.pagesizes import A4
@@ -181,50 +177,6 @@ def login_form():
 if not st.session_state.authenticated:
     login_form()
     st.stop()
-
-# ==========================================
-# 📧 AUTOMATED EMAIL DISPATCH HELPER
-# ==========================================
-def send_email_report(receiver_email, pdf_bytes, report_no, hospital_name):
-    smtp_server = st.secrets.get("SMTP_SERVER", "smtp.gmail.com")
-    smtp_port = int(st.secrets.get("SMTP_PORT", 587))
-    sender_email = st.secrets.get("SENDER_EMAIL", "")
-    sender_password = st.secrets.get("SENDER_PASSWORD", "")
-
-    if not sender_email or not sender_password:
-        return False, "SMTP details missing in Secrets!"
-
-    try:
-        msg = MIMEMultipart()
-        msg['From'] = f"Biomed Service Portal <{sender_email}>"
-        msg['To'] = receiver_email
-        msg['Subject'] = f"Technical Inspection Report - {hospital_name} [{report_no}]"
-
-        body = f"""
-Dear Customer / Technical Team,
-
-Please find attached the official Aesculap Technical Inspection Report for {hospital_name}.
-
-Report Ref No: {report_no}
-Generated Date: {datetime.date.today().strftime('%d %B %Y')}
-
-Best Regards,
-Biomed International (Pvt) Ltd - Aesculap Division
-        """
-        msg.attach(MIMEText(body, 'plain'))
-
-        pdf_attachment = MIMEApplication(pdf_bytes, _subtype="pdf")
-        pdf_attachment.add_header('Content-Disposition', 'attachment', filename=f"Inspection_Report_{report_no}.pdf")
-        msg.attach(pdf_attachment)
-
-        server = smtplib.SMTP(smtp_server, smtp_port)
-        server.starttls()
-        server.login(sender_email, sender_password)
-        server.send_message(msg)
-        server.quit()
-        return True, "Email successfully sent!"
-    except Exception as e:
-        return False, str(e)
 
 # ==========================================
 # 2. DATA LISTS & CATALOG SETUP
@@ -835,39 +787,18 @@ if view_mode == "Inspection Entry Portal":
             )
 
         st.markdown("<br>", unsafe_allow_html=True)
-        st.markdown("<div class='section-title'>📊 Cloud Sync & Direct Dispatch</div>", unsafe_allow_html=True)
         
-        col_sync, col_email = st.columns(2)
-        with col_sync:
-            if st.button("🔄 Sync Summary to Google Sheet", type="secondary", use_container_width=True):
-                if st.session_state.get("instruments_payload") and st.session_state.get("meta_payload"):
-                    with st.spinner("Uploading to Cloud..."):
-                        synced, err_msg = sync_to_google_sheet(
-                            st.session_state.instruments_payload, 
-                            st.session_state.meta_payload
-                        )
-                        if synced:
-                            st.success("✅ Data Synced to Google Sheet!")
-                        else:
-                            st.error(f"❌ Error: {err_msg}")
-        
-        with col_email:
-            receiver_mail = st.text_input("📩 Hospital / Client Email", placeholder="doctor@hospital.lk")
-            if st.button("🚀 Dispatch PDF Report via Email", type="primary", use_container_width=True):
-                if receiver_mail:
-                    with st.spinner("Dispatching Email..."):
-                        ok, msg = send_email_report(
-                            receiver_mail,
-                            st.session_state.last_pdf_bytes,
-                            st.session_state.last_report_no,
-                            st.session_state.meta_payload.get("hospital", "Hospital")
-                        )
-                        if ok:
-                            st.success("✅ Report Dispatched Successfully!")
-                        else:
-                            st.error(f"❌ Dispatch Failed: {msg}")
-                else:
-                    st.warning("⚠️ Please enter a valid Email Address.")
+        if st.button("🔄 Sync Summary to Google Sheet", type="secondary", use_container_width=True):
+            if st.session_state.get("instruments_payload") and st.session_state.get("meta_payload"):
+                with st.spinner("Uploading to Cloud..."):
+                    synced, err_msg = sync_to_google_sheet(
+                        st.session_state.instruments_payload, 
+                        st.session_state.meta_payload
+                    )
+                    if synced:
+                        st.success("✅ Data Synced to Google Sheet!")
+                    else:
+                        st.error(f"❌ Error: {err_msg}")
 
 elif view_mode == "Analytics Dashboard":
     st.markdown("<div class='section-title'>📊 Executive Inspection Analytics Dashboard</div>", unsafe_allow_html=True)
