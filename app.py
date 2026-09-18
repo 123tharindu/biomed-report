@@ -163,6 +163,45 @@ st.markdown(
 )
 
 # ==========================================
+# 🔐 AUTHENTICATION & LOGIN SYSTEM
+# ==========================================
+# ඔබට මෙහි Users & Passwords වෙනස් කරගත හැක
+USER_CREDENTIALS = {
+    "biomed": "aesculap2026",
+    "admin": "biomed123"
+}
+
+if 'authenticated' not in st.session_state:
+    st.session_state.authenticated = False
+
+def login_form():
+    st.markdown("<br><br>", unsafe_allow_html=True)
+    col1, col2, col3 = st.columns([1, 2, 1])
+    with col2:
+        st.markdown(f"""
+            <div style="background: white; padding: 30px; border-radius: 16px; border: 1px solid #E2E8F0; box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05); text-align: center;">
+                <img src="{LOGO_SRC}" style="height: 50px; margin-bottom: 15px;" />
+                <h2 style="color: #0F172A; margin-bottom: 5px; font-weight: 800;">BIOMED PORTAL LOGIN</h2>
+                <p style="color: #64748B; font-size: 13px; margin-bottom: 20px;">AESCULAP TECHNICAL FIELD INSPECTION SYSTEM</p>
+            </div>
+        """, unsafe_allow_html=True)
+        
+        username = st.text_input("👤 Username", key="login_user")
+        password = st.text_input("🔑 Password", type="password", key="login_pass")
+        
+        if st.button("🔓 Secure Login", type="primary", use_container_width=True):
+            if username in USER_CREDENTIALS and USER_CREDENTIALS[username] == password:
+                st.session_state.authenticated = True
+                st.session_state.user_name = username
+                st.rerun()
+            else:
+                st.error("❌ Incorrect Username or Password!")
+
+if not st.session_state.authenticated:
+    login_form()
+    st.stop()
+
+# ==========================================
 # 2. DATA LISTS & CATALOG SETUP
 # ==========================================
 GEMINI_API_KEY = st.secrets.get("GEMINI_API_KEY", os.environ.get("GEMINI_API_KEY", ""))
@@ -475,6 +514,12 @@ st.markdown(f"""
     </div>
 """, unsafe_allow_html=True)
 
+st.sidebar.markdown(f"🔒 **LoggedIn as:** `{st.session_state.user_name}`")
+if st.sidebar.button("🚪 Logout"):
+    st.session_state.authenticated = False
+    st.rerun()
+
+st.sidebar.markdown("---")
 st.sidebar.markdown("### 📋 Inspection Context")
 hospital_sel = st.sidebar.selectbox("Customer / Hospital", options=SL_HOSPITALS)
 if hospital_sel == "Other (Type manually)":
