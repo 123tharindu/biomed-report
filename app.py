@@ -744,12 +744,8 @@ if view_mode == "Inspection Entry Portal":
                 canvas.setFillColor(colors.HexColor("#64748B"))
                 
                 # Left Side: Document Note
-                canvas.drawString(20, 15, "Biomed International (Pvt) Ltd • Confidential Technical Report")
-                
-                # Right Side: Developer Credit
-                dev_credit = "Portal Architecture & Developed by: BIOMED INTERNATIONAL PVT LTD"
-                canvas.drawRightString(575, 15, dev_credit)
-                canvas.restoreState()
+                canvas.drawString(20, 15, "Biomed International (Pvt) Ltd • Confidential Technical 
+    
 
             doc.build(story, onFirstPage=draw_page_decorations, onLaterPages=draw_page_decorations)
             st.session_state.last_pdf_bytes = buffer.getvalue()
