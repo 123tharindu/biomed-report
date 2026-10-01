@@ -593,7 +593,7 @@ if view_mode == "Inspection Entry Portal":
                 rightMargin=20,
                 leftMargin=20,
                 topMargin=20,
-                bottomMargin=35  # Footer එක සඳහා Bottom Margin එක සකස් කර ඇත
+                bottomMargin=35
             )
             story, styles = [], getSampleStyleSheet()
             temp_files = []
@@ -725,7 +725,7 @@ if view_mode == "Inspection Entry Portal":
             ]))
             story.append(t_sig)
 
-            # 🌊 AESCULAP WATERMARK & FOOTER DEVELOPER CREDIT FUNCTION
+            # 🌊 AESCULAP WATERMARK & FOOTER FUNCTION
             def draw_page_decorations(canvas, doc):
                 canvas.saveState()
                 
@@ -738,14 +738,14 @@ if view_mode == "Inspection Entry Portal":
                 canvas.drawCentredString(0, 0, "AESCULAP")
                 canvas.restoreState()
 
-                # 2. Page Footer Credit
+                # 2. Page Footer
                 canvas.saveState()
                 canvas.setFont("Helvetica", 7)
                 canvas.setFillColor(colors.HexColor("#64748B"))
                 
-                # Left Side: Document Note
-                canvas.drawString(20, 15, "Biomed International (Pvt) Ltd • Confidential Technical 
-    
+                # Left Side Note Only (Developer credit removed)
+                canvas.drawString(20, 15, "Biomed International (Pvt) Ltd • Confidential Technical Report")
+                canvas.restoreState()
 
             doc.build(story, onFirstPage=draw_page_decorations, onLaterPages=draw_page_decorations)
             st.session_state.last_pdf_bytes = buffer.getvalue()
