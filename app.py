@@ -593,7 +593,7 @@ if view_mode == "Inspection Entry Portal":
                 rightMargin=20,
                 leftMargin=20,
                 topMargin=20,
-                bottomMargin=20
+                bottomMargin=35  # Footer එක සඳහා Bottom Margin එක සකස් කර ඇත
             )
             story, styles = [], getSampleStyleSheet()
             temp_files = []
@@ -725,19 +725,33 @@ if view_mode == "Inspection Entry Portal":
             ]))
             story.append(t_sig)
 
-            # 🌊 AESCULAP BACKGROUND WATERMARK FUNCTION
-            def draw_watermark(canvas, doc):
+            # 🌊 AESCULAP WATERMARK & FOOTER DEVELOPER CREDIT FUNCTION
+            def draw_page_decorations(canvas, doc):
                 canvas.saveState()
+                
+                # 1. Background Watermark
                 canvas.setFont("Helvetica-Bold", 60)
                 canvas.setFillColor(colors.HexColor("#0F172A"))
                 canvas.setFillAlpha(0.06)
-                
                 canvas.translate(300, 420)
                 canvas.rotate(45)
                 canvas.drawCentredString(0, 0, "AESCULAP")
                 canvas.restoreState()
 
-            doc.build(story, onFirstPage=draw_watermark, onLaterPages=draw_watermark)
+                # 2. Page Footer Credit
+                canvas.saveState()
+                canvas.setFont("Helvetica", 7)
+                canvas.setFillColor(colors.HexColor("#64748B"))
+                
+                # Left Side: Document Note
+                canvas.drawString(20, 15, "Biomed International (Pvt) Ltd • Confidential Technical Report")
+                
+                # Right Side: Developer Credit
+                dev_credit = "Portal Architecture & Developed by: BIOMED INTERNATIONAL PVT LTD"
+                canvas.drawRightString(575, 15, dev_credit)
+                canvas.restoreState()
+
+            doc.build(story, onFirstPage=draw_page_decorations, onLaterPages=draw_page_decorations)
             st.session_state.last_pdf_bytes = buffer.getvalue()
 
             for tf in temp_files:
